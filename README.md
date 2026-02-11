@@ -53,9 +53,6 @@ election status management via date check
 
 📦 Installation
 
-# Clone repository
-git clone https://github.com/sheetalpadanad414/Smart-E-Voting-.git
-
 # Backend
 cd server
 npm install
