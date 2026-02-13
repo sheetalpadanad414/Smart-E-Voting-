@@ -1,0 +1,39 @@
+# Backend
+backend/node_modules/
+backend/.env
+backend/package-lock.json
+backend/yarn.lock
+backend/reports/
+backend/*.log
+
+# Frontend
+frontend/node_modules/
+frontend/.env.local
+frontend/.env.development.local
+frontend/.env.test.local
+frontend/.env.production.local
+frontend/npm-debug.log*
+frontend/yarn-debug.log*
+frontend/yarn-error.log*
+frontend/build/
+frontend/.DS_Store
+frontend/dist/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Misc
+.env
+.env.local
+.env.*.local
+.cache/
+.tmp/
