@@ -1,157 +1,380 @@
-import React, { useState } from 'react';
-import { FiBarChart2, FiUsers, FiVote, FiTrendingUp, FiCalendar, FiShield } from 'react-icons/fi';
+import React, { useState, useEffect } from 'react';
+import { adminAPI } from '../services/api';
 import toast from 'react-hot-toast';
+import { FiUsers, FiFileText, FiUserPlus, FiTrash2, FiEdit, FiPlay, FiPause } from 'react-icons/fi';
 
-const AdminDashboard = () => {
-  const [stats] = useState({
-    totalUsers: 2847,
-    totalVoters: 2654,
-    totalAdmins: 193,
-    activeElections: 8,
-    completedElections: 24,
-    totalVotes: 15342,
-    verifiedUsers: 2741,
-    pendingVerification: 106
-  });
+const AdminDashboardNew = () => {
+  const [activeTab, setActiveTab] = useState('overview');
+  const [stats, setStats] = useState(null);
+  const [users, setUsers] = useState([]);
+  const [candidates, setCandidates] = useState([]);
+  const [electionStatus, setElectionStatus] = useState('inactive');
+  const [loading, setLoading] = useState(false);
 
-  const [recentActivities] = useState([
-    { id: 1, user: 'John Doe', action: 'Voted in Class President Election', time: '2 minutes ago', type: 'vote' },
-    { id: 2, user: 'Admin User', action: 'Created new election: Sports Committee', time: '15 minutes ago', type: 'election' },
-    { id: 3, user: 'Jane Smith', action: 'Registered account', time: '1 hour ago', type: 'registration' },
-    { id: 4, user: 'Robert Johnson', action: 'Verified email', time: '2 hours ago', type: 'verification' },
-    { id: 5, user: 'Sarah Williams', action: 'Voted in Student Council Election', time: '3 hours ago', type: 'vote' },
-  ]);
+  // Form states
+  const [newCandidate, setNewCandidate] = useState({ name: '', party: '' });
+  const [newUser, setNewUser] = useState({ name: '', email: '', password: '', role: 'voter' });
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
+
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true);
+      const [dashboardRes, candidatesRes, statusRes] = await Promise.all([
+        adminAPI.getDashboard(),
+        adminAPI.getAllCandidates(),
+        adminAPI.getElectionStatus()
+      ]);
+      
+      setStats(dashboardRes.data);
+      setCandidates(candidatesRes.data.candidates || []);
+      setElectionStatus(statusRes.data.status);
+    } catch (error) {
+      toast.error('Failed to load dashboard data');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAddCandidate = async (e) => {
+    e.preventDefault();
+    if (!newCandidate.name || !newCandidate.party) {
+      toast.error('Please fill all fields');
+      return;
+    }
+    try {
+      await adminAPI.createCandidate(newCandidate);
+      toast.success('Candidate added successfully');
+      setNewCandidate({ name: '', party: '' });
+      fetchDashboardData();
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to add candidate');
+    }
+  };
+
+  const handleDeleteCandidate = async (id) => {
+    if (!window.confirm('Are you sure you want to delete this candidate?')) return;
+    try {
+      await adminAPI.deleteCandidate(id);
+      toast.success('Candidate deleted successfully');
+      fetchDashboardData();
+    } catch (error) {
+      toast.error('Failed to delete candidate');
+    }
+  };
+
+  const handleToggleElection = async () => {
+    try {
+      if (electionStatus === 'active') {
+        await adminAPI.stopElection();
+        toast.success('Election stopped');
+      } else {
+        await adminAPI.startElection();
+        toast.success('Election started');
+      }
+      fetchDashboardData();
+    } catch (error) {
+      toast.error('Failed to toggle election status');
+    }
+  };
+
+  if (loading && !stats) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-xl">Loading...</div>
+      </div>
+    );
+  }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      {/* Page Header */}
-      <div className="mb-8">
-        <h1 className="text-4xl font-bold text-gray-900 mb-2">Dashboard</h1>
-        <p className="text-gray-600">Welcome back! Here's your election statistics.</p>
-      </div>
-
-      {/* Statistics Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        {/* Total Users Card */}
-        <div className="bg-white rounded-xl shadow-md hover:shadow-lg transition p-6 border-l-4 border-blue-500">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-600 text-sm mb-1">Total Users</p>
-              <p className="text-3xl font-bold text-gray-900">{stats.totalUsers.toLocaleString()}</p>
-              <p className="text-xs text-green-600 mt-2">↑ 12% from last month</p>
-            </div>
-            <div className="p-3 bg-blue-100 rounded-lg">
-              <FiUsers size={28} className="text-blue-600" />
-            </div>
-          </div>
-        </div>
-
-        {/* Active Elections */}
-        <div className="bg-white rounded-xl shadow-md hover:shadow-lg transition p-6 border-l-4 border-green-500">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-600 text-sm mb-1">Active Elections</p>
-              <p className="text-3xl font-bold text-gray-900">{stats.activeElections}</p>
-              <p className="text-xs text-green-600 mt-2">Running currently</p>
-            </div>
-            <div className="p-3 bg-green-100 rounded-lg">
-              <FiVote size={28} className="text-green-600" />
-            </div>
-          </div>
-        </div>
-
-        {/* Total Votes */}
-        <div className="bg-white rounded-xl shadow-md hover:shadow-lg transition p-6 border-l-4 border-purple-500">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-600 text-sm mb-1">Total Votes Cast</p>
-              <p className="text-3xl font-bold text-gray-900">{stats.totalVotes.toLocaleString()}</p>
-              <p className="text-xs text-green-600 mt-2">↑ 8% this week</p>
-            </div>
-            <div className="p-3 bg-purple-100 rounded-lg">
-              <FiBarChart2 size={28} className="text-purple-600" />
-            </div>
-          </div>
-        </div>
-
-        {/* Verified Users */}
-        <div className="bg-white rounded-xl shadow-md hover:shadow-lg transition p-6 border-l-4 border-orange-500">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-600 text-sm mb-1">Verified Users</p>
-              <p className="text-3xl font-bold text-gray-900">{stats.verifiedUsers}</p>
-              <p className="text-xs text-orange-600 mt-2">{stats.pendingVerification} pending</p>
-            </div>
-            <div className="p-3 bg-orange-100 rounded-lg">
-              <FiShield size={28} className="text-orange-600" />
-            </div>
-          </div>
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <div className="bg-white shadow">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
+          <p className="mt-1 text-sm text-gray-600">Manage elections, users, and candidates</p>
         </div>
       </div>
 
-      {/* Secondary Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div className="bg-gradient-to-br from-blue-500 to-blue-700 text-white rounded-xl shadow-md p-6">
-          <p className="text-blue-100 text-sm mb-2">Total Voters</p>
-          <p className="text-3xl font-bold">{stats.totalVoters.toLocaleString()}</p>
-          <p className="text-blue-100 text-xs mt-3">Eligible to vote</p>
+      {/* Tabs */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6">
+        <div className="border-b border-gray-200">
+          <nav className="-mb-px flex space-x-8">
+            <button
+              onClick={() => setActiveTab('overview')}
+              className={`${
+                activeTab === 'overview'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+            >
+              Overview
+            </button>
+            <button
+              onClick={() => setActiveTab('elections')}
+              className={`${
+                activeTab === 'elections'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+            >
+              Elections
+            </button>
+            <button
+              onClick={() => setActiveTab('candidates')}
+              className={`${
+                activeTab === 'candidates'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+            >
+              Candidates
+            </button>
+            <button
+              onClick={() => setActiveTab('users')}
+              className={`${
+                activeTab === 'users'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+            >
+              Users
+            </button>
+          </nav>
         </div>
 
-        <div className="bg-gradient-to-br from-green-500 to-green-700 text-white rounded-xl shadow-md p-6">
-          <p className="text-green-100 text-sm mb-2">Completed Elections</p>
-          <p className="text-3xl font-bold">{stats.completedElections}</p>
-          <p className="text-green-100 text-xs mt-3">Successfully completed</p>
-        </div>
-
-        <div className="bg-gradient-to-br from-purple-500 to-purple-700 text-white rounded-xl shadow-md p-6">
-          <p className="text-purple-100 text-sm mb-2">System Uptime</p>
-          <p className="text-3xl font-bold">99.9%</p>
-          <p className="text-purple-100 text-xs mt-3">Last 30 days</p>
-        </div>
-      </div>
-
-      {/* Recent Activities */}
-      <div className="bg-white rounded-xl shadow-md overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
-          <h2 className="text-xl font-bold text-gray-900 flex items-center space-x-2">
-            <FiTrendingUp className="text-blue-600" />
-            <span>Recent Activities</span>
-          </h2>
-        </div>
-
-        <div className="divide-y divide-gray-200">
-          {recentActivities.map((activity) => (
-            <div key={activity.id} className="px-6 py-4 hover:bg-gray-50 transition flex items-start justify-between">
-              <div className="flex items-start space-x-4">
-                <div className={`p-2 rounded-lg ${
-                  activity.type === 'vote' ? 'bg-green-100' :
-                  activity.type === 'election' ? 'bg-blue-100' :
-                  activity.type === 'registration' ? 'bg-purple-100' :
-                  'bg-orange-100'
-                }`}>
-                  <FiVote className={`${
-                    activity.type === 'vote' ? 'text-green-600' :
-                    activity.type === 'election' ? 'text-blue-600' :
-                    activity.type === 'registration' ? 'text-purple-600' :
-                    'text-orange-600'
-                  }`} size={20} />
+        {/* Content */}
+        <div className="mt-6 pb-12">
+          {/* Overview Tab */}
+          {activeTab === 'overview' && stats && (
+            <div className="space-y-6">
+              {/* Stats Cards */}
+              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="bg-white overflow-hidden shadow rounded-lg">
+                  <div className="p-5">
+                    <div className="flex items-center">
+                      <div className="flex-shrink-0">
+                        <FiUsers className="h-6 w-6 text-gray-400" />
+                      </div>
+                      <div className="ml-5 w-0 flex-1">
+                        <dl>
+                          <dt className="text-sm font-medium text-gray-500 truncate">Total Users</dt>
+                          <dd className="text-3xl font-semibold text-gray-900">{stats.users?.total_users || 0}</dd>
+                        </dl>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <p className="font-semibold text-gray-900">{activity.user}</p>
-                  <p className="text-sm text-gray-600">{activity.action}</p>
+
+                <div className="bg-white overflow-hidden shadow rounded-lg">
+                  <div className="p-5">
+                    <div className="flex items-center">
+                      <div className="flex-shrink-0">
+                        <FiFileText className="h-6 w-6 text-gray-400" />
+                      </div>
+                      <div className="ml-5 w-0 flex-1">
+                        <dl>
+                          <dt className="text-sm font-medium text-gray-500 truncate">Candidates</dt>
+                          <dd className="text-3xl font-semibold text-gray-900">{stats.candidates || 0}</dd>
+                        </dl>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-white overflow-hidden shadow rounded-lg">
+                  <div className="p-5">
+                    <div className="flex items-center">
+                      <div className="flex-shrink-0">
+                        <FiUsers className="h-6 w-6 text-gray-400" />
+                      </div>
+                      <div className="ml-5 w-0 flex-1">
+                        <dl>
+                          <dt className="text-sm font-medium text-gray-500 truncate">Verified Voters</dt>
+                          <dd className="text-3xl font-semibold text-gray-900">{stats.users?.verified_voters || 0}</dd>
+                        </dl>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-white overflow-hidden shadow rounded-lg">
+                  <div className="p-5">
+                    <div className="flex items-center">
+                      <div className="flex-shrink-0">
+                        <FiFileText className="h-6 w-6 text-gray-400" />
+                      </div>
+                      <div className="ml-5 w-0 flex-1">
+                        <dl>
+                          <dt className="text-sm font-medium text-gray-500 truncate">Total Votes</dt>
+                          <dd className="text-3xl font-semibold text-gray-900">{stats.votes || 0}</dd>
+                        </dl>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
-              <p className="text-xs text-gray-500 whitespace-nowrap ml-4">{activity.time}</p>
-            </div>
-          ))}
-        </div>
 
-        <div className="px-6 py-4 bg-gray-50 text-center border-t border-gray-200">
-          <button className="text-blue-600 hover:text-blue-800 font-semibold text-sm">View All Activities</button>
+              {/* Election Status */}
+              <div className="bg-white shadow rounded-lg p-6">
+                <h2 className="text-lg font-medium text-gray-900 mb-4">Election Control</h2>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-600">Current Status:</p>
+                    <p className={`text-2xl font-bold ${electionStatus === 'active' ? 'text-green-600' : 'text-gray-600'}`}>
+                      {electionStatus === 'active' ? 'Active' : 'Inactive'}
+                    </p>
+                  </div>
+                  <button
+                    onClick={handleToggleElection}
+                    className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold text-white ${
+                      electionStatus === 'active' ? 'bg-red-500 hover:bg-red-600' : 'bg-green-500 hover:bg-green-600'
+                    }`}
+                  >
+                    {electionStatus === 'active' ? <><FiPause /> Stop Election</> : <><FiPlay /> Start Election</>}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Elections Tab */}
+          {activeTab === 'elections' && (
+            <div className="bg-white shadow rounded-lg p-6">
+              <h2 className="text-xl font-bold text-gray-900 mb-6">Election Management</h2>
+              
+              <div className="mb-6">
+                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                  <div>
+                    <h3 className="text-lg font-semibold">Current Election Status</h3>
+                    <p className={`text-2xl font-bold mt-2 ${electionStatus === 'active' ? 'text-green-600' : 'text-gray-600'}`}>
+                      {electionStatus === 'active' ? 'Active - Voting Open' : 'Inactive - Voting Closed'}
+                    </p>
+                  </div>
+                  <button
+                    onClick={handleToggleElection}
+                    className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold text-white ${
+                      electionStatus === 'active' ? 'bg-red-500 hover:bg-red-600' : 'bg-green-500 hover:bg-green-600'
+                    }`}
+                  >
+                    {electionStatus === 'active' ? <><FiPause /> Stop Election</> : <><FiPlay /> Start Election</>}
+                  </button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="p-4 border rounded-lg">
+                  <p className="text-sm text-gray-600">Total Candidates</p>
+                  <p className="text-2xl font-bold text-gray-900">{candidates.length}</p>
+                </div>
+                <div className="p-4 border rounded-lg">
+                  <p className="text-sm text-gray-600">Total Votes Cast</p>
+                  <p className="text-2xl font-bold text-gray-900">{stats?.votes || 0}</p>
+                </div>
+                <div className="p-4 border rounded-lg">
+                  <p className="text-sm text-gray-600">Eligible Voters</p>
+                  <p className="text-2xl font-bold text-gray-900">{stats?.users?.verified_voters || 0}</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Candidates Tab */}
+          {activeTab === 'candidates' && (
+            <div className="space-y-6">
+              {/* Add Candidate Form */}
+              <div className="bg-white shadow rounded-lg p-6">
+                <h2 className="text-xl font-bold text-gray-900 mb-4">Add New Candidate</h2>
+                <form onSubmit={handleAddCandidate} className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <input
+                    type="text"
+                    placeholder="Candidate Name"
+                    value={newCandidate.name}
+                    onChange={(e) => setNewCandidate({ ...newCandidate, name: e.target.value })}
+                    className="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <input
+                    type="text"
+                    placeholder="Party Name"
+                    value={newCandidate.party}
+                    onChange={(e) => setNewCandidate({ ...newCandidate, party: e.target.value })}
+                    className="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <button
+                    type="submit"
+                    className="flex items-center justify-center gap-2 px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-semibold"
+                  >
+                    <FiUserPlus /> Add Candidate
+                  </button>
+                </form>
+              </div>
+
+              {/* Candidates List */}
+              <div className="bg-white shadow rounded-lg overflow-hidden">
+                <div className="px-6 py-4 border-b">
+                  <h2 className="text-xl font-bold text-gray-900">All Candidates</h2>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Party</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Votes</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {candidates.map((candidate) => (
+                        <tr key={candidate.id}>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{candidate.name}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{candidate.party}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{candidate.votes}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                            <button
+                              onClick={() => handleDeleteCandidate(candidate.id)}
+                              className="text-red-600 hover:text-red-900 flex items-center gap-1"
+                            >
+                              <FiTrash2 /> Delete
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Users Tab */}
+          {activeTab === 'users' && (
+            <div className="bg-white shadow rounded-lg p-6">
+              <h2 className="text-xl font-bold text-gray-900 mb-4">User Management</h2>
+              <p className="text-gray-600">User management features coming soon. Currently showing {stats?.users?.total_users || 0} total users.</p>
+              
+              <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="p-4 bg-blue-50 rounded-lg">
+                  <p className="text-sm text-gray-600">Total Users</p>
+                  <p className="text-2xl font-bold text-blue-600">{stats?.users?.total_users || 0}</p>
+                </div>
+                <div className="p-4 bg-green-50 rounded-lg">
+                  <p className="text-sm text-gray-600">Verified Voters</p>
+                  <p className="text-2xl font-bold text-green-600">{stats?.users?.verified_voters || 0}</p>
+                </div>
+                <div className="p-4 bg-purple-50 rounded-lg">
+                  <p className="text-sm text-gray-600">Admins</p>
+                  <p className="text-2xl font-bold text-purple-600">{stats?.users?.total_admins || 0}</p>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
   );
 };
 
-export default AdminDashboard;
+export default AdminDashboardNew;

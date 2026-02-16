@@ -136,6 +136,8 @@ const AdminUsers = () => {
               >
                 <option value="voter">Voter</option>
                 <option value="admin">Admin</option>
+                <option value="election_officer">Election Officer</option>
+                <option value="observer">Observer</option>
               </select>
             </div>
 
@@ -219,8 +221,15 @@ const AdminUsers = () => {
                       <td className="px-6 py-3 text-gray-600">{user.email}</td>
                       <td className="px-6 py-3 text-gray-600">{user.phone || '-'}</td>
                       <td className="px-6 py-3">
-                        <span className={`px-3 py-1 rounded-full text-sm font-semibold ${user.role === 'admin' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}>
-                          {user.role}
+                        <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
+                          user.role === 'admin' ? 'bg-purple-100 text-purple-700' :
+                          user.role === 'election_officer' ? 'bg-green-100 text-green-700' :
+                          user.role === 'observer' ? 'bg-orange-100 text-orange-700' :
+                          'bg-blue-100 text-blue-700'
+                        }`}>
+                          {user.role === 'election_officer' ? 'Election Officer' :
+                           user.role === 'observer' ? 'Observer' :
+                           user.role.charAt(0).toUpperCase() + user.role.slice(1)}
                         </span>
                       </td>
                       <td className="px-6 py-3">

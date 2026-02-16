@@ -1,8 +1,30 @@
 import { create } from 'zustand';
 
+const getUserFromStorage = () => {
+  try {
+    const userStr = localStorage.getItem('user');
+    if (!userStr || userStr === 'undefined' || userStr === 'null') {
+      return null;
+    }
+    return JSON.parse(userStr);
+  } catch (error) {
+    console.error('Error parsing user from localStorage:', error);
+    localStorage.removeItem('user');
+    return null;
+  }
+};
+
+const getTokenFromStorage = () => {
+  const token = localStorage.getItem('token');
+  if (!token || token === 'undefined' || token === 'null') {
+    return null;
+  }
+  return token;
+};
+
 const useAuthStore = create((set, get) => ({
-  user: localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user')) : null,
-  token: localStorage.getItem('token') || null,
+  user: getUserFromStorage(),
+  token: getTokenFromStorage(),
 
   login: (user, token) => {
     localStorage.setItem('user', JSON.stringify(user));

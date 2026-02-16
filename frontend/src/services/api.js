@@ -35,6 +35,7 @@ api.interceptors.response.use(
 export const authAPI = {
   register: (data) => api.post('/auth/register', data),
   login: (data) => api.post('/auth/login', data),
+  adminLogin: (data) => api.post('/auth/admin/login', data),
   verifyOTP: (data) => api.post('/auth/verify-otp', data),
   resendOTP: (data) => api.post('/auth/resend-otp', data),
   getProfile: () => api.get('/auth/profile')
@@ -58,8 +59,12 @@ export const adminAPI = {
   createElection: (data) => api.post('/admin/elections', data),
   updateElection: (id, data) => api.put(`/admin/elections/${id}`, data),
   deleteElection: (id) => api.delete(`/admin/elections/${id}`),
+  getElectionStatus: () => api.get('/admin/election/status'),
+  startElection: () => api.post('/admin/election/start'),
+  stopElection: () => api.post('/admin/election/stop'),
   
   // Candidates
+  getAllCandidates: () => api.get('/admin/candidates'),
   getCandidates: (electionId, page = 1, limit = 50) =>
     api.get(`/admin/elections/${electionId}/candidates`, { params: { page, limit } }),
   createCandidate: (data) => api.post('/admin/candidates', data),
