@@ -163,7 +163,7 @@ const AdminDashboard = () => {
           </div>
         </div>
 
-        <div className="mt-8">
+        <div className="mt-8 flex flex-wrap gap-4">
           <a
             href="/admin/elections"
             className="inline-block bg-blue-500 text-white px-6 py-3 rounded-lg hover:bg-blue-600 transition font-semibold"
@@ -172,9 +172,15 @@ const AdminDashboard = () => {
           </a>
           <a
             href="/admin/users"
-            className="inline-block ml-4 bg-green-500 text-white px-6 py-3 rounded-lg hover:bg-green-600 transition font-semibold"
+            className="inline-block bg-green-500 text-white px-6 py-3 rounded-lg hover:bg-green-600 transition font-semibold"
           >
             Manage Users
+          </a>
+          <a
+            href="/admin/candidates"
+            className="inline-block bg-purple-500 text-white px-6 py-3 rounded-lg hover:bg-purple-600 transition font-semibold"
+          >
+            Manage Candidates
           </a>
         </div>
       </div>

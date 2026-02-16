@@ -8,56 +8,19 @@ import { FiMail, FiLock, FiEye, FiEyeOff, FiUser, FiPhone, FiBriefcase } from 'r
 const Register = () => {
   const navigate = useNavigate();
   const login = useAuthStore((state) => state.login);
-  const [step, setStep] = useState('role'); // role, register, otp
+  const [step, setStep] = useState('register'); // register, otp
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState('');
   const [otp, setOtp] = useState('');
-  const [selectedRole, setSelectedRole] = useState('voter');
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     password: '',
     confirmPassword: '',
     phone: '',
-    role: 'voter',
-    department: '',
-    designation: '',
-    assignment_area: ''
+    role: 'voter'
   });
-
-  const roles = [
-    {
-      id: 'voter',
-      name: 'Voter',
-      description: 'Register as a voter to participate in elections',
-      icon: '🗳️'
-    },
-    {
-      id: 'election_officer',
-      name: 'Election Officer',
-      description: 'Monitor and manage elections in real-time',
-      icon: '📋'
-    },
-    {
-      id: 'observer',
-      name: 'Observer',
-      description: 'View election progress and results',
-      icon: '👁️'
-    },
-    {
-      id: 'admin',
-      name: 'Admin',
-      description: 'Complete system administration and management',
-      icon: '⚙️'
-    }
-  ];
-
-  const handleSelectRole = (roleId) => {
-    setSelectedRole(roleId);
-    setFormData((prev) => ({ ...prev, role: roleId }));
-    setStep('register');
-  };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -134,14 +97,7 @@ const Register = () => {
       toast.success('Email verified successfully');
       
       // Redirect based on role
-      const roleRedirects = {
-        admin: '/admin/dashboard',
-        voter: '/elections',
-        election_officer: '/election-officer/dashboard',
-        observer: '/observer/elections'
-      };
-      
-      navigate(roleRedirects[response.data.user.role] || '/');
+      navigate('/voter/elections');
     } catch (error) {
       toast.error(error.response?.data?.error || 'OTP verification failed');
     } finally {
@@ -167,38 +123,8 @@ const Register = () => {
         <h2 className="text-3xl font-bold text-gray-800 mb-2">Smart E-Voting</h2>
         <p className="text-gray-600 mb-6">Create your account</p>
 
-        {step === 'role' ? (
-          <div>
-            <h3 className="text-xl font-semibold text-gray-700 mb-6">Select Your Role</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {roles.map((role) => (
-                <button
-                  key={role.id}
-                  onClick={() => handleSelectRole(role.id)}
-                  className="p-6 border-2 border-gray-200 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition text-left"
-                >
-                  <div className="text-4xl mb-2">{role.icon}</div>
-                  <h4 className="text-lg font-semibold text-gray-800">{role.name}</h4>
-                  <p className="text-sm text-gray-600 mt-2">{role.description}</p>
-                </button>
-              ))}
-            </div>
-          </div>
-        ) : step === 'register' ? (
+        {step === 'register' ? (
           <form onSubmit={handleRegister} className="space-y-4">
-            <div className="mb-4">
-              <button
-                type="button"
-                onClick={() => setStep('role')}
-                className="text-blue-500 hover:text-blue-600 text-sm font-semibold"
-              >
-                ← Change Role
-              </button>
-              <p className="text-sm text-gray-600 mt-1">
-                Registering as: <strong>{roles.find(r => r.id === formData.role)?.name}</strong>
-              </p>
-            </div>
-
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Full Name *</label>
               <div className="flex items-center border border-gray-300 rounded-lg px-3 py-2">

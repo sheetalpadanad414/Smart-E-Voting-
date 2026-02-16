@@ -192,10 +192,10 @@ class AuthController {
 
       // Generate new OTP
       const otp = generateOTP();
-      const expiresAt = new Date(Date.now() + parseInt(process.env.OTP_EXPIRE) * 60 * 1000);
+      const expiresAt = new Date(Date.now() + parseInt(process.env.OTP_EXPIRE || 5) * 60 * 1000);
 
-      // Update OTP
-      await User.updateOTP(email, otp, expiresAt);
+      // Save OTP to otps table
+      await OTP.create(email, otp, 'registration', expiresAt);
 
       // Send OTP email
       const emailSent = await sendOTPEmail(email, otp, 'registration');
@@ -224,6 +224,69 @@ class AuthController {
       res.json({
         user
       });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  // Admin Login (no OTP required)
+  static async adminLogin(req, res, next) {
+    try {
+      const { email, password } = req.body;
+
+      // Check account lock
+      const isLocked = await User.isAccountLocked(email);
+      if (isLocked) {
+        return res.status(429).json({ error: 'Account is temporarily locked due to too many failed login attempts' });
+      }
+
+      // Find user
+      const user = await User.findByEmail(email);
+      if (!user) {
+        return res.status(401).json({ error: 'Invalid email or password' });
+      }
+
+      // Check if user is admin
+      if (user.role !== 'admin') {
+        return res.status(403).json({ error: 'Access denied. Admin privileges required.' });
+      }
+
+      // Check password
+      const isPasswordValid = await comparePassword(password, user.password);
+      if (!isPasswordValid) {
+        await User.recordFailedLogin(email);
+        const failedAttempts = user.failed_login_attempts + 1;
+
+        if (failedAttempts >= 5) {
+          await User.lockAccount(email);
+          return res.status(429).json({ error: 'Account locked due to multiple failed attempts' });
+        }
+
+        return res.status(401).json({ error: 'Invalid email or password' });
+      }
+
+      // Reset failed attempts
+      await User.resetFailedAttempts(email);
+
+      // Update last login
+      await User.updateLastLogin(user.id);
+
+      // Generate token
+      const token = generateToken(user.id, user.role);
+
+      res.json({
+        message: 'Admin login successful',
+        token,
+        user: {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          role: user.role
+        }
+      });
+
+      // Log action
+      AdminService.logAction(user.id, 'ADMIN_LOGIN', 'user', user.id, {}, req.ip);
     } catch (error) {
       next(error);
     }

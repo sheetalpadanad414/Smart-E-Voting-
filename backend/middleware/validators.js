@@ -18,7 +18,7 @@ const validateResults = (req, res, next) => {
 const validateRegister = [
   body('name').trim().notEmpty().withMessage('Name is required').isLength({ min: 2 }).withMessage('Name must be at least 2 characters'),
   body('email').isEmail().withMessage('Please provide a valid email'),
-  body('password').isLength({ min: 8 }).withMessage('Password must be at least 8 characters').matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/).withMessage('Password must contain uppercase, lowercase, number, and special character'),
+  body('password').isLength({ min: 8 }).withMessage('Password must be at least 8 characters').matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*?])[A-Za-z\d!@#$%^&*?]{8,}$/).withMessage('Password must contain uppercase, lowercase, number, and special character'),
   body('phone').optional().isLength({ min: 10, max: 15 }).withMessage('Invalid phone number format'),
   validateResults
 ];

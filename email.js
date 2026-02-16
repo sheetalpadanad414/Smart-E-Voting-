@@ -2,8 +2,8 @@ const nodemailer = require('nodemailer');
 require('dotenv').config();
 
 const transporter = nodemailer.createTransport({
-  host: process.env.EMAIL_HOST || 'smtp.ethereal.email',
-  port: parseInt(process.env.EMAIL_PORT) || 587,
+  host: process.env.EMAIL_HOST,
+  port: process.env.EMAIL_PORT,
   secure: false,
   auth: {
     user: process.env.EMAIL_USER,
@@ -22,22 +22,8 @@ const sendOTPEmail = async (email, otp, purpose = 'registration') => {
   const subject = purposes[purpose] || 'Verification Code';
   const expires = process.env.OTP_EXPIRE || '5';
 
-  // Text format with OTP auto-fill support
-  const text = `Your ${subject} code is: ${otp}\n\nIt expires in ${expires} minutes.\n\n@smart-evoting.com #${otp}`;
-  
-  // HTML format with OTP auto-fill support
-  const html = `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-      <h2 style="color: #667eea; text-align: center;">Smart E-Voting System</h2>
-      <p>Your <strong>${subject}</strong> code is:</p>
-      <div style="background: #f5f5f5; padding: 20px; text-align: center; border-radius: 8px; margin: 20px 0;">
-        <h1 style="font-size: 36px; letter-spacing: 8px; margin: 0; color: #333;">${otp}</h1>
-      </div>
-      <p style="color: #666;">This code expires in <strong>${expires} minutes</strong>.</p>
-      <p style="color: #999; font-size: 12px; margin-top: 30px;">If you didn't request this code, please ignore this email.</p>
-      <div style="display: none;">@smart-evoting.com #${otp}</div>
-    </div>
-  `;
+  const text = `Your ${subject} code is: ${otp}\nIt expires in ${expires} minutes.`;
+  const html = `<p>Your <strong>${subject}</strong> code is:</p><h2>${otp}</h2><p>It expires in ${expires} minutes.</p>`;
 
   // If EMAIL_ENABLED is explicitly set to 'true' and transporter is configured, attempt to send
   const emailEnabled = String(process.env.EMAIL_ENABLED || 'false').toLowerCase() === 'true';
@@ -52,9 +38,8 @@ const sendOTPEmail = async (email, otp, purpose = 'registration') => {
     };
 
     try {
-      const info = await transporter.sendMail(mailOptions);
+      await transporter.sendMail(mailOptions);
       console.log(`✓ OTP email sent to ${email}`);
-      console.log(`📧 Preview URL: ${nodemailer.getTestMessageUrl(info)}`);
       return true;
     } catch (err) {
       console.error('✗ Failed to send OTP email:', err.message);

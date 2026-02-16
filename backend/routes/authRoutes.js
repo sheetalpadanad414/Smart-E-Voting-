@@ -10,6 +10,7 @@ router.post('/register', authLimiter, validateRegister, AuthController.register)
 router.post('/login', authLimiter, validateLogin, AuthController.login);
 router.post('/verify-otp', validateOTPVerification, AuthController.verifyOTP);
 router.post('/resend-otp', authLimiter, AuthController.resendOTP);
+router.post('/admin/login', authLimiter, validateLogin, AuthController.adminLogin);
 
 // Protected routes
 router.get('/profile', authenticateToken, AuthController.getProfile);

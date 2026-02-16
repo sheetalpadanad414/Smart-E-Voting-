@@ -256,6 +256,12 @@ const AdminElections = () => {
                         >
                           <FiEye />
                         </a>
+                        <a
+                          href={`/admin/candidates/${election.id}`}
+                          className="text-purple-500 hover:text-purple-700 text-sm font-semibold"
+                        >
+                          Candidates
+                        </a>
                         <button
                           onClick={() => {
                             setEditingId(election.id);
