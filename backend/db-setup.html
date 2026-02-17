@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Database Setup - Smart E-Voting</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            padding: 40px;
+            max-width: 500px;
+            width: 100%;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 500;
+            font-size: 14px;
+        }
+        input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+        input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        .btn {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s;
+            margin-top: 10px;
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        .message {
+            padding: 12px;
+            border-radius: 6px;
+            margin-top: 20px;
+            font-size: 14px;
+            display: none;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        .loading {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+            margin-left: 10px;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🗳️ Database Setup</h1>
+        <p class="subtitle">Configure your MySQL database connection</p>
+        
+        <form id="dbForm">
+            <div class="form-group">
+                <label for="host">Database Host</label>
+                <input type="text" id="host" value="127.0.0.1" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="port">Port</label>
+                <input type="number" id="port" value="3306" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="user">Username</label>
+                <input type="text" id="user" value="root" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" placeholder="Leave empty if no password">
+            </div>
+            
+            <div class="form-group">
+                <label for="database">Database Name</label>
+                <input type="text" id="database" value="smart_e_voting" required>
+            </div>
+            
+            <button type="submit" class="btn" id="testBtn">
+                Test Connection
+            </button>
+            
+            <button type="button" class="btn" id="saveBtn" style="background: #28a745; display: none;">
+                Save Configuration
+            </button>
+        </form>
+        
+        <div id="message" class="message"></div>
+    </div>
+
+    <script>
+        const form = document.getElementById('dbForm');
+        const testBtn = document.getElementById('testBtn');
+        const saveBtn = document.getElementById('saveBtn');
+        const message = document.getElementById('message');
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            await testConnection();
+        });
+
+        saveBtn.addEventListener('click', saveConfiguration);
+
+        async function testConnection() {
+            const config = {
+                host: document.getElementById('host').value,
+                port: document.getElementById('port').value,
+                user: document.getElementById('user').value,
+                password: document.getElementById('password').value,
+                database: document.getElementById('database').value
+            };
+
+            testBtn.disabled = true;
+            testBtn.innerHTML = 'Testing Connection<span class="loading"></span>';
+            showMessage('Testing database connection...', 'info');
+
+            try {
+                const response = await fetch('http://localhost:5000/api/test-db', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(config)
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    showMessage('✓ Connection successful! You can now save this configuration.', 'success');
+                    saveBtn.style.display = 'block';
+                } else {
+                    showMessage('✗ Connection failed: ' + (data.error || 'Unknown error'), 'error');
+                    saveBtn.style.display = 'none';
+                }
+            } catch (error) {
+                showMessage('✗ Cannot connect to backend server. Make sure the backend is running on port 5000.', 'error');
+                saveBtn.style.display = 'none';
+            }
+
+            testBtn.disabled = false;
+            testBtn.innerHTML = 'Test Connection';
+        }
+
+        function saveConfiguration() {
+            const config = {
+                host: document.getElementById('host').value,
+                port: document.getElementById('port').value,
+                user: document.getElementById('user').value,
+                password: document.getElementById('password').value,
+                database: document.getElementById('database').value
+            };
+
+            const envContent = `# Backend environment variables
+DB_HOST=${config.host}
+DB_PORT=${config.port}
+DB_USER=${config.user}
+DB_PASSWORD=${config.password}
+DB_NAME=${config.database}
+
+JWT_SECRET=change_this_to_a_secure_random_string_12345678
+JWT_EXPIRE=7d
+
+BCRYPT_ROUNDS=10
+
+# OTP expire time in minutes
+OTP_EXPIRE=5
+
+# Email (configure with SMTP server or Gmail SMTP)
+EMAIL_HOST=smtp.example.com
+EMAIL_PORT=587
+EMAIL_USER=you@example.com
+EMAIL_PASSWORD=your_email_password
+EMAIL_FROM="Smart E-Voting" <no-reply@example.com>
+`;
+
+            const blob = new Blob([envContent], { type: 'text/plain' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = '.env';
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+
+            showMessage('✓ Configuration downloaded! Copy the .env file to your backend folder and restart the server.', 'success');
+        }
+
+        function showMessage(text, type) {
+            message.textContent = text;
+            message.className = 'message ' + type;
+            message.style.display = 'block';
+        }
+    </script>
+</body>
+</html>

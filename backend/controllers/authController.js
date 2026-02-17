@@ -47,19 +47,33 @@ class AuthController {
       // Save OTP
       await OTP.create(email, otp, 'registration', expiresAt);
 
-      // Send OTP email
-      const emailSent = await sendOTPEmail(email, otp, 'registration');
-
-      if (!emailSent) {
-        return res.status(500).json({ error: 'Failed to send OTP email' });
+      // Send OTP email (skip in development)
+      const isDevelopment = process.env.NODE_ENV !== 'production';
+      let emailSent = true;
+      
+      if (!isDevelopment) {
+        emailSent = await sendOTPEmail(email, otp, 'registration');
+        if (!emailSent) {
+          return res.status(500).json({ error: 'Failed to send OTP email' });
+        }
       }
 
-      res.status(201).json({
-        message: 'Registration successful. Please verify your email with OTP.',
+      const response = {
+        message: isDevelopment ? 
+          'Registration successful. OTP generated for development.' : 
+          'Registration successful. Please verify your email with OTP.',
         userId: user.id,
         email: user.email,
         role: user.role
-      });
+      };
+
+      // Include OTP in development mode
+      if (isDevelopment) {
+        response.developmentOTP = otp;
+        console.log(`🔐 Development OTP for ${email}: ${otp}`);
+      }
+
+      res.status(201).json(response);
 
       // Log action (safely)
       try {
@@ -149,28 +163,45 @@ class AuthController {
         return res.status(403).json({ error: 'Please verify your email first' });
       }
 
+      // Generate OTP for login
+      const otp = generateOTP();
+      const expiresAt = new Date(Date.now() + parseInt(process.env.OTP_EXPIRE || 5) * 60 * 1000);
+
+      // Save OTP
+      await OTP.create(email, otp, 'login', expiresAt);
+
+      // Send OTP email (skip in development)
+      const isDevelopment = process.env.NODE_ENV !== 'production';
+      let emailSent = true;
+      
+      if (!isDevelopment) {
+        emailSent = await sendOTPEmail(email, otp, 'login');
+        if (!emailSent) {
+          return res.status(500).json({ error: 'Failed to send OTP email' });
+        }
+      }
+
+      const response = {
+        message: isDevelopment ? 
+          'OTP generated for development. Please verify to complete login.' : 
+          'OTP sent to your email. Please verify to complete login.',
+        email: email,
+        requiresOTP: true
+      };
+
+      // Include OTP in development mode
+      if (isDevelopment) {
+        response.developmentOTP = otp;
+        console.log(`🔐 Development Login OTP for ${email}: ${otp}`);
+      }
+
+      res.json(response);
+
       // Reset failed attempts
       await User.resetFailedAttempts(email);
 
-      // Update last login
-      await User.updateLastLogin(user.id);
-
-      // Generate token
-      const token = generateToken(user.id, user.role);
-
-      res.json({
-        message: 'Login successful',
-        token,
-        user: {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          role: user.role
-        }
-      });
-
       // Log action
-      AdminService.logAction(user.id, 'LOGIN', 'user', user.id, {}, req.ip);
+      AdminService.logAction(user.id, 'LOGIN_REQUEST', 'user', user.id, {}, req.ip);
     } catch (error) {
       next(error);
     }
@@ -197,14 +228,30 @@ class AuthController {
       // Save OTP to otps table
       await OTP.create(email, otp, 'registration', expiresAt);
 
-      // Send OTP email
-      const emailSent = await sendOTPEmail(email, otp, 'registration');
-
-      if (!emailSent) {
-        return res.status(500).json({ error: 'Failed to send OTP email' });
+      // Send OTP email (skip in development)
+      const isDevelopment = process.env.NODE_ENV !== 'production';
+      let emailSent = true;
+      
+      if (!isDevelopment) {
+        emailSent = await sendOTPEmail(email, otp, 'registration');
+        if (!emailSent) {
+          return res.status(500).json({ error: 'Failed to send OTP email' });
+        }
       }
 
-      res.json({ message: 'OTP sent to your email' });
+      const response = {
+        message: isDevelopment ? 
+          'New OTP generated for development.' : 
+          'OTP sent to your email'
+      };
+
+      // Include OTP in development mode
+      if (isDevelopment) {
+        response.developmentOTP = otp;
+        console.log(`🔐 Development Resend OTP for ${email}: ${otp}`);
+      }
+
+      res.json(response);
 
       // Log action
       AdminService.logAction(user.id, 'RESEND_OTP', 'user', user.id, {}, req.ip);

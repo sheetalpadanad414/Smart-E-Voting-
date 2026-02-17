@@ -23,6 +23,8 @@ import AdminCandidates from './pages/AdminCandidates';
 import VoterElections from './pages/VoterElections';
 import VoteElection from './pages/VoteElection';
 import ElectionResults from './pages/ElectionResults';
+import VotingHistory from './pages/VotingHistory';
+import ElectionResultsPage from './pages/ElectionResultsPage';
 
 // Election Officer Pages
 import ElectionOfficerDashboard from './pages/ElectionOfficerDashboard';
@@ -47,6 +49,7 @@ const App = () => {
         <Route path="/verify-otp" element={<VerifyOTP />} />
         <Route path="/cast-vote" element={<CastVote />} />
         <Route path="/vote-success" element={<VoteSuccess />} />
+        <Route path="/results" element={<ElectionResultsPage />} />
 
         {/* Admin Routes - No Layout */}
         {token && user?.role === 'admin' && (
@@ -63,9 +66,10 @@ const App = () => {
         {token && user?.role === 'voter' && (
           <>
             <Route path="/elections" element={<Layout><VoterElections /></Layout>} />
+            <Route path="/elections/:id/vote" element={<CastVote />} />
             <Route path="/elections/:id" element={<Layout><VoteElection /></Layout>} />
             <Route path="/results/:id" element={<Layout><ElectionResults /></Layout>} />
-            <Route path="/history" element={<Layout><VoterElections /></Layout>} />
+            <Route path="/voter/history" element={<VotingHistory />} />
           </>
         )}
 
