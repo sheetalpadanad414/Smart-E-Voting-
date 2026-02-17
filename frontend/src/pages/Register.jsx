@@ -59,7 +59,7 @@ const Register = () => {
 
     try {
       setLoading(true);
-      await authAPI.register({
+      const response = await authAPI.register({
         name: formData.name,
         email: formData.email,
         password: formData.password,
@@ -69,9 +69,18 @@ const Register = () => {
         designation: formData.designation || null,
         assignment_area: formData.assignment_area || null
       });
+      
       setEmail(formData.email);
       setStep('otp');
-      toast.success('OTP sent to your email');
+      
+      // Auto-populate OTP in development mode
+      if (response.data.developmentOTP) {
+        setOtp(response.data.developmentOTP);
+        toast.success(`Development OTP: ${response.data.developmentOTP}`);
+        console.log('🔐 Auto-filled development OTP:', response.data.developmentOTP);
+      } else {
+        toast.success('Registration successful! Please verify OTP');
+      }
     } catch (error) {
       toast.error(error.response?.data?.error || 'Registration failed');
     } finally {
@@ -108,8 +117,16 @@ const Register = () => {
   const handleResendOTP = async () => {
     try {
       setLoading(true);
-      await authAPI.resendOTP({ email });
-      toast.success('OTP sent to your email');
+      const response = await authAPI.resendOTP({ email });
+      
+      // Auto-populate OTP in development mode
+      if (response.data.developmentOTP) {
+        setOtp(response.data.developmentOTP);
+        toast.success(`Development OTP: ${response.data.developmentOTP}`);
+        console.log('🔐 Auto-filled development OTP:', response.data.developmentOTP);
+      } else {
+        toast.success('OTP sent to your email');
+      }
     } catch (error) {
       toast.error(error.response?.data?.error || 'Failed to resend OTP');
     } finally {

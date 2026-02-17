@@ -82,7 +82,15 @@ const Login = () => {
         const response = await authAPI.login(formData);
         setEmail(formData.email);
         setStep('otp');
-        toast.success('OTP sent to your email');
+        
+        // Auto-populate OTP in development mode
+        if (response.data.developmentOTP) {
+          setOtp(response.data.developmentOTP);
+          toast.success(`Development OTP: ${response.data.developmentOTP}`);
+          console.log('🔐 Auto-filled development OTP:', response.data.developmentOTP);
+        } else {
+          toast.success('OTP sent to your email');
+        }
       }
     } catch (error) {
       toast.error(error.response?.data?.message || 'Login failed');
@@ -132,8 +140,16 @@ const Login = () => {
   const handleResendOTP = async () => {
     try {
       setLoading(true);
-      await authAPI.login(formData);
-      toast.success('OTP resent successfully');
+      const response = await authAPI.login(formData);
+      
+      // Auto-populate OTP in development mode
+      if (response.data.developmentOTP) {
+        setOtp(response.data.developmentOTP);
+        toast.success(`Development OTP: ${response.data.developmentOTP}`);
+        console.log('🔐 Auto-filled development OTP:', response.data.developmentOTP);
+      } else {
+        toast.success('OTP resent successfully');
+      }
     } catch (error) {
       toast.error('Failed to resend OTP');
     } finally {

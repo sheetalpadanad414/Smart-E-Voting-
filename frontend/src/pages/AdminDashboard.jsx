@@ -1,15 +1,26 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { adminAPI } from '../services/api';
+import useAuthStore from '../contexts/authStore';
 import toast from 'react-hot-toast';
-import { FiUsers, FiFileText, FiCheckSquare, FiClock } from 'react-icons/fi';
+import { FiUsers, FiFileText, FiCheckSquare, FiClock, FiLogOut } from 'react-icons/fi';
 
 const AdminDashboard = () => {
+  const navigate = useNavigate();
+  const logout = useAuthStore((state) => state.logout);
+  const user = useAuthStore((state) => state.user);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     fetchDashboard();
   }, []);
+
+  const handleLogout = () => {
+    logout();
+    toast.success('Logged out successfully');
+    navigate('/login');
+  };
 
   const fetchDashboard = async () => {
     try {
@@ -48,7 +59,19 @@ const AdminDashboard = () => {
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-7xl mx-auto">
-        <h1 className="text-3xl font-bold text-gray-800 mb-8">Admin Dashboard</h1>
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-800">Admin Dashboard</h1>
+            <p className="text-gray-600 mt-1">Welcome back, {user?.name || 'Admin'}</p>
+          </div>
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-2 bg-red-500 text-white px-6 py-3 rounded-lg hover:bg-red-600 transition font-semibold shadow-md"
+          >
+            <FiLogOut />
+            Logout
+          </button>
+        </div>
 
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-8">
           <StatCard
