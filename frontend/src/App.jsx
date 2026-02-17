@@ -9,6 +9,9 @@ import useAuthStore from './contexts/authStore';
 import Home from './pages/Home';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import VerifyOTP from './pages/VerifyOTP';
+import CastVote from './pages/CastVote';
+import VoteSuccess from './pages/VoteSuccess';
 
 // Admin Pages
 import AdminDashboard from './pages/AdminDashboard';
@@ -41,6 +44,9 @@ const App = () => {
         <Route path="/" element={<Layout><Home /></Layout>} />
         <Route path="/login" element={!token ? <Layout><Login /></Layout> : <Navigate to={user?.role === 'admin' ? '/admin/dashboard' : '/elections'} />} />
         <Route path="/register" element={!token ? <Layout><Register /></Layout> : <Navigate to={user?.role === 'admin' ? '/admin/dashboard' : '/elections'} />} />
+        <Route path="/verify-otp" element={<VerifyOTP />} />
+        <Route path="/cast-vote" element={<CastVote />} />
+        <Route path="/vote-success" element={<VoteSuccess />} />
 
         {/* Admin Routes - No Layout */}
         {token && user?.role === 'admin' && (
