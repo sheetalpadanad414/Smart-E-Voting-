@@ -50,7 +50,16 @@ const VoterElections = () => {
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-6xl mx-auto">
-        <h1 className="text-3xl font-bold text-gray-800 mb-8">Available Elections</h1>
+        <div className="flex items-center justify-between mb-8">
+          <h1 className="text-3xl font-bold text-gray-800">Available Elections</h1>
+          <a
+            href="/results"
+            className="bg-blue-500 text-white px-6 py-3 rounded-lg hover:bg-blue-600 transition font-semibold flex items-center gap-2"
+          >
+            <FiCheckCircle />
+            View Results
+          </a>
+        </div>
 
         {elections.length === 0 ? (
           <div className="bg-white rounded-lg shadow p-8 text-center">
@@ -83,18 +92,26 @@ const VoterElections = () => {
                 </div>
 
                 <div className="flex gap-2 pt-4 border-t">
+                  {election.status === 'active' && (
+                    <a
+                      href={`/elections/${election.id}/vote`}
+                      className="flex-1 bg-green-500 text-white py-2 rounded-lg hover:bg-green-600 transition text-center font-semibold"
+                    >
+                      Vote Now
+                    </a>
+                  )}
                   <a
-                    href={`/voter/elections/${election.id}`}
+                    href={`/elections/${election.id}`}
                     className="flex-1 bg-blue-500 text-white py-2 rounded-lg hover:bg-blue-600 transition text-center font-semibold"
                   >
                     View Details
                   </a>
                   {election.status === 'completed' && (
                     <a
-                      href={`/voter/results/${election.id}`}
-                      className="flex-1 bg-green-500 text-white py-2 rounded-lg hover:bg-green-600 transition text-center font-semibold"
+                      href={`/results/${election.id}`}
+                      className="flex-1 bg-purple-500 text-white py-2 rounded-lg hover:bg-purple-600 transition text-center font-semibold"
                     >
-                      View Results
+                      Results
                     </a>
                   )}
                 </div>
