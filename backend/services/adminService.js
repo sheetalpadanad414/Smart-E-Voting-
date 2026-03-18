@@ -27,12 +27,25 @@ class AdminService {
     const [activeElections] = await connection.query('SELECT COUNT(*) as total FROM elections WHERE status = "active"');
     const [completedElections] = await connection.query('SELECT COUNT(*) as total FROM elections WHERE status = "completed"');
 
+    // Get statistics by election type
+    const [typeStats] = await connection.query(`
+      SELECT 
+        election_type,
+        COUNT(*) as count,
+        SUM(CASE WHEN status = 'active' THEN 1 ELSE 0 END) as active_count,
+        SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed_count
+      FROM elections 
+      WHERE election_type IS NOT NULL
+      GROUP BY election_type
+    `);
+
     connection.release();
 
     return {
       draft: draftElections[0].total,
       active: activeElections[0].total,
-      completed: completedElections[0].total
+      completed: completedElections[0].total,
+      by_type: typeStats
     };
   }
 
@@ -41,6 +54,19 @@ class AdminService {
     const elections = await this.getElectionStatistics();
 
     const connection = await pool.getConnection();
+    
+    // Get party count
+    const [partyCount] = await connection.query('SELECT COUNT(*) as total FROM parties');
+    
+    // Get candidate count
+    const [candidateCount] = await connection.query('SELECT COUNT(*) as total FROM candidates');
+    
+    // Get total elections count
+    const [totalElections] = await connection.query('SELECT COUNT(*) as total FROM elections');
+    
+    // Get voter count
+    const [voterCount] = await connection.query('SELECT COUNT(*) as total FROM users WHERE role = "voter"');
+    
     const [recentLogs] = await connection.query(`
       SELECT al.*, u.name as user_name 
       FROM audit_logs al 
@@ -53,6 +79,11 @@ class AdminService {
     return {
       users,
       elections,
+      total_elections: totalElections[0].total,
+      active_elections: elections.active,
+      total_parties: partyCount[0].total,
+      total_candidates: candidateCount[0].total,
+      total_voters: voterCount[0].total,
       recent_activities: recentLogs
     };
   }

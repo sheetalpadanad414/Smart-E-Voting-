@@ -40,6 +40,76 @@ class AdminController {
     }
   }
 
+  // Get voters with verification status
+  static async getVotersWithStatus(req, res, next) {
+    try {
+      const page = parseInt(req.query.page) || 1;
+      const limit = parseInt(req.query.limit) || 50;
+      const verified = req.query.verified;
+      const otpVerified = req.query.otp_verified;
+      const hasVoted = req.query.has_voted;
+
+      const filters = { role: 'voter' };
+      if (verified !== undefined) filters.is_verified = verified === 'true';
+      if (otpVerified !== undefined) filters.otp_verified = otpVerified === 'true';
+      if (hasVoted !== undefined) filters.has_voted = hasVoted === 'true';
+
+      const result = await User.getVotersWithStatus(page, limit, filters);
+
+      res.json({
+        total: result.total,
+        pages: result.pages,
+        current_page: page,
+        voters: result.voters
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  // Export voters to CSV
+  static async exportVotersCSV(req, res, next) {
+    try {
+      const verified = req.query.verified;
+      const otpVerified = req.query.otp_verified;
+      const hasVoted = req.query.has_voted;
+
+      const filters = { role: 'voter' };
+      if (verified !== undefined) filters.is_verified = verified === 'true';
+      if (otpVerified !== undefined) filters.otp_verified = otpVerified === 'true';
+      if (hasVoted !== undefined) filters.has_voted = hasVoted === 'true';
+
+      const voters = await User.getAllVotersForExport(filters);
+
+      // Generate CSV
+      const csvHeader = 'Name,Email,Phone,Voter ID,Verified,OTP Verified,Has Voted,Last Login,Created At\n';
+      const csvRows = voters.map(voter => {
+        return [
+          voter.name || '',
+          voter.email || '',
+          voter.phone || '',
+          voter.voter_id || '',
+          voter.is_verified ? 'Yes' : 'No',
+          voter.otp_verified ? 'Yes' : 'No',
+          voter.has_voted ? 'Yes' : 'No',
+          voter.last_login ? new Date(voter.last_login).toLocaleString() : 'Never',
+          voter.created_at ? new Date(voter.created_at).toLocaleString() : ''
+        ].map(field => `"${field}"`).join(',');
+      }).join('\n');
+
+      const csv = csvHeader + csvRows;
+
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', `attachment; filename=voters-${Date.now()}.csv`);
+      res.send(csv);
+
+      // Log action
+      AdminService.logAction(req.user.userId, 'EXPORT_VOTERS_CSV', 'user', null, filters, req.ip);
+    } catch (error) {
+      next(error);
+    }
+  }
+
   // Create user
   static async createUser(req, res, next) {
     try {
@@ -120,10 +190,10 @@ class AdminController {
   // Create election
   static async createElection(req, res, next) {
     try {
-      const { title, description, start_date, end_date, is_public } = req.body;
+      const { title, description, start_date, end_date, is_public, election_type, election_subtype } = req.body;
 
       const election = await Election.create(
-        { title, description, start_date, end_date, is_public },
+        { title, description, start_date, end_date, is_public, election_type, election_subtype },
         req.user.userId
       );
 
@@ -142,17 +212,56 @@ class AdminController {
   // Get all elections
   static async getAllElections(req, res, next) {
     try {
+      // Auto-update election status based on dates
+      await Election.updateStatusBasedOnDate();
+
       const page = parseInt(req.query.page) || 1;
       const limit = parseInt(req.query.limit) || 20;
       const status = req.query.status;
+      const countryId = req.query.country_id;
+      const stateId = req.query.state_id;
+      const electionType = req.query.election_type;
+      const electionSubtype = req.query.election_subtype;
 
-      const result = await Election.getAll(page, limit, { status });
+      const filters = {};
+      if (status) filters.status = status;
+      if (countryId) filters.country_id = parseInt(countryId);
+      if (stateId) filters.state_id = parseInt(stateId);
+      if (electionType) filters.election_type = electionType;
+      if (electionSubtype) filters.election_subtype = electionSubtype;
+
+      const result = await Election.getAll(page, limit, filters);
+
+      // Fetch location names for each election
+      const Location = require('../models/Location');
+      const electionsWithLocation = await Promise.all(
+        result.elections.map(async (election) => {
+          let countryName = null;
+          let stateName = null;
+
+          if (election.country_id) {
+            const country = await Location.getCountryById(election.country_id);
+            countryName = country ? country.name : null;
+          }
+
+          if (election.state_id) {
+            const state = await Location.getStateById(election.state_id);
+            stateName = state ? state.name : null;
+          }
+
+          return {
+            ...election,
+            country_name: countryName,
+            state_name: stateName
+          };
+        })
+      );
 
       res.json({
         total: result.total,
         pages: result.pages,
         current_page: page,
-        elections: result.elections
+        elections: electionsWithLocation
       });
     } catch (error) {
       next(error);
@@ -186,9 +295,9 @@ class AdminController {
   static async updateElection(req, res, next) {
     try {
       const { id } = req.params;
-      const { title, description, start_date, end_date, is_public } = req.body;
+      const { title, description, start_date, end_date, is_public, election_type, election_subtype } = req.body;
 
-      const success = await Election.update(id, { title, description, start_date, end_date, is_public });
+      const success = await Election.update(id, { title, description, start_date, end_date, is_public, election_type, election_subtype });
 
       if (!success) {
         return res.status(400).json({ error: 'No updates provided' });
@@ -232,7 +341,7 @@ class AdminController {
   // Create candidate
   static async createCandidate(req, res, next) {
     try {
-      const { election_id, name, description, symbol, image_url, position, party_name } = req.body;
+      const { election_id, name, description, symbol, image_url, position, party_id, party_name } = req.body;
 
       const election = await Election.findById(election_id);
       if (!election) {
@@ -246,7 +355,8 @@ class AdminController {
         symbol,
         image_url,
         position,
-        party_name
+        party_id,
+        party_name // Keep for backward compatibility
       });
 
       res.status(201).json({
@@ -272,6 +382,26 @@ class AdminController {
       const limit = parseInt(req.query.limit) || 50;
 
       const result = await Candidate.getByElection(election_id, page, limit);
+
+      res.json({
+        total: result.total,
+        pages: result.pages,
+        current_page: page,
+        candidates: result.candidates
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  // Get candidates by party
+  static async getCandidatesByParty(req, res, next) {
+    try {
+      const { party_id } = req.params;
+      const page = parseInt(req.query.page) || 1;
+      const limit = parseInt(req.query.limit) || 50;
+
+      const result = await Candidate.getByParty(party_id, page, limit);
 
       res.json({
         total: result.total,

@@ -6,6 +6,7 @@ const User = require('../models/User');
 const { pool } = require('../config/database');
 const { generateElectionResultsPDF } = require('../utils/pdfGenerator');
 const AdminService = require('../services/adminService');
+const { addCalculatedStatus, addCalculatedStatusToArray } = require('../utils/electionStatus');
 
 class VoterController {
   // Get available elections
@@ -14,13 +15,59 @@ class VoterController {
       const page = parseInt(req.query.page) || 1;
       const limit = parseInt(req.query.limit) || 20;
 
+      // Get voter's location if authenticated
+      let voterCountryId = null;
+      let voterStateId = null;
+      
+      if (req.user && req.user.userId) {
+        const voter = await User.findById(req.user.userId);
+        if (voter) {
+          voterCountryId = voter.country_id;
+          voterStateId = voter.state_id;
+        }
+      }
+
+      // Get all public elections
       const result = await Election.getAll(page, limit, { is_public: true });
 
+      // Filter elections based on voter's location
+      let filteredElections = result.elections;
+      
+      if (req.user && req.user.userId) {
+        filteredElections = result.elections.filter(election => {
+          // If election has no location restriction, include it
+          if (!election.country_id && !election.state_id) {
+            return true;
+          }
+
+          // If voter has no location, exclude location-restricted elections
+          if (!voterCountryId) {
+            return false;
+          }
+
+          // Check country match
+          if (election.country_id && election.country_id !== voterCountryId) {
+            return false;
+          }
+
+          // Check state match (if election has state restriction)
+          if (election.state_id && election.state_id !== voterStateId) {
+            return false;
+          }
+
+          return true;
+        });
+      }
+
+      // Calculate status for all elections based on dates
+      const electionsWithStatus = addCalculatedStatusToArray(filteredElections);
+
       res.json({
-        total: result.total,
-        pages: result.pages,
+        total: filteredElections.length,
+        pages: Math.ceil(filteredElections.length / limit),
         current_page: page,
-        elections: result.elections
+        elections: electionsWithStatus,
+        voter_location: req.user ? { country_id: voterCountryId, state_id: voterStateId } : null
       });
     } catch (error) {
       next(error);
@@ -32,28 +79,58 @@ class VoterController {
     try {
       const { id } = req.params;
 
+      console.log('=== GET ELECTION DETAILS ===');
+      console.log('Requested election ID:', id);
+      console.log('Request path:', req.path);
+      console.log('Full URL:', req.originalUrl);
+
       const election = await Election.findById(id);
+      
       if (!election) {
-        return res.status(404).json({ error: 'Election not found' });
+        console.log('❌ Election not found with ID:', id);
+        return res.status(404).json({ 
+          error: 'Election not found',
+          message: 'The election you are trying to access does not exist.',
+          election_id: id
+        });
       }
+
+      console.log('✓ Election found:', election.title);
+
+      // Calculate status based on dates
+      const electionWithStatus = addCalculatedStatus(election);
+      console.log('✓ Status calculated:', electionWithStatus.status);
 
       // Get candidates
       const candidatesResult = await Candidate.getByElection(id);
+      console.log('✓ Candidates found:', candidatesResult.candidates.length);
 
       // Check if user has voted (only if authenticated)
       let hasVoted = false;
       if (req.user && req.user.userId) {
         hasVoted = await Vote.hasVoted(id, req.user.userId);
+        console.log('✓ User has voted:', hasVoted);
       }
 
+      console.log('=== SENDING RESPONSE ===');
       res.json({
-        election,
+        election: electionWithStatus,
         candidates: candidatesResult.candidates,
         has_voted: hasVoted
       });
     } catch (error) {
-      console.error('Error in getElectionDetails:', error);
-      next(error);
+      console.error('=== ERROR IN GET ELECTION DETAILS ===');
+      console.error('Error type:', error.constructor.name);
+      console.error('Error message:', error.message);
+      console.error('Error stack:', error.stack);
+      
+      // Send proper error response
+      if (!res.headersSent) {
+        res.status(500).json({ 
+          error: 'Database error',
+          message: error.message
+        });
+      }
     }
   }
 
@@ -73,20 +150,59 @@ class VoterController {
         return res.status(404).json({ error: 'User not found' });
       }
 
-      // Check election exists and is active
+      // Check location-based eligibility
+      const Location = require('../models/Location');
+      const eligibility = await Location.canVoteInElection(req.user.userId, election_id);
+      if (!eligibility.canVote) {
+        return res.status(403).json({ 
+          error: 'You are not eligible to vote in this election',
+          reason: eligibility.reason
+        });
+      }
+
+      // Check election exists
       const election = await Election.findById(election_id);
       if (!election) {
         return res.status(404).json({ error: 'Election not found' });
       }
 
-      if (election.status !== 'active') {
-        return res.status(400).json({ error: 'This election is not currently active' });
-      }
+      // Validate election dates - Proper date comparison
+      const now = new Date();
+      const startDate = new Date(election.start_date);
+      const endDate = new Date(election.end_date);
+      
+      // Normalize dates for accurate comparison
+      now.setHours(0, 0, 0, 0);
+      startDate.setHours(0, 0, 0, 0);
+      endDate.setHours(23, 59, 59, 999); // Allow voting until end of last day
+      
+      console.log('Vote validation:', {
+        now: now.toISOString(),
+        startDate: startDate.toISOString(),
+        endDate: endDate.toISOString(),
+        isBeforeStart: now < startDate,
+        isAfterEnd: now > endDate
+      });
 
       // Check if election is within voting window
-      const now = new Date();
-      if (now < new Date(election.start_date) || now > new Date(election.end_date)) {
-        return res.status(400).json({ error: 'Election voting period has ended or not started' });
+      if (now < startDate) {
+        return res.status(400).json({ 
+          error: 'Election has not started yet',
+          start_date: election.start_date
+        });
+      }
+
+      if (now > endDate) {
+        return res.status(400).json({ 
+          error: 'Election voting period has ended',
+          end_date: election.end_date
+        });
+      }
+
+      // Check election status (case-insensitive) - but prioritize date validation
+      const electionStatus = (election.status || '').toLowerCase();
+      if (electionStatus === 'draft') {
+        return res.status(400).json({ error: 'This election is still in draft mode' });
       }
 
       // Check if already voted
@@ -112,6 +228,11 @@ class VoterController {
 
       // Increment candidate vote count
       await Candidate.incrementVoteCount(candidate_id);
+
+      // Update user has_voted flag
+      const connection = await pool.getConnection();
+      await connection.query('UPDATE users SET has_voted = TRUE WHERE id = ?', [req.user.userId]);
+      connection.release();
 
       res.status(201).json({
         message: 'Vote cast successfully',
@@ -158,6 +279,11 @@ class VoterController {
 
       const isValid = await OTP.verify(user.email, otp, 'vote');
       if (!isValid) return res.status(400).json({ error: 'Invalid or expired OTP' });
+
+      // Update user otp_verified flag
+      const connection = await pool.getConnection();
+      await connection.query('UPDATE users SET otp_verified = TRUE WHERE id = ?', [req.user.userId]);
+      connection.release();
 
       res.json({ message: 'OTP verified. You may now vote.' });
     } catch (error) {

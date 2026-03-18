@@ -1,4 +1,5 @@
 const express = require('express');
+const path = require('path');
 const cors = require('cors');
 const helmet = require('helmet');
 const compression = require('compression');
@@ -10,7 +11,6 @@ const { apiLimiter } = require('./middleware/rateLimiter');
 const testDatabaseConnection = require('./testDbConnection');
 require('dotenv').config();
 
-// Import routes
 const authRoutes = require('./routes/authRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const voterRoutes = require('./routes/voterRoutes');
@@ -18,35 +18,41 @@ const electionOfficerRoutes = require('./routes/electionOfficerRoutes');
 const observerRoutes = require('./routes/observerRoutes');
 const otpRoutes = require('./routes/otpRoutes');
 const voteRoutes = require('./routes/voteRoutes');
+const locationRoutes = require('./routes/locationRoutes');
+const partyRoutes = require('./routes/partyRoutes');
+const electionCategoryRoutes = require('./routes/electionCategoryRoutes');
 
 const app = express();
 
-// Security middleware
-app.use(helmet());
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
-  credentials: true
+  origin: ['http://localhost:3000', 'http://localhost:3001'],
+  credentials: true,
+  exposedHeaders: ['Content-Type', 'Content-Length']
 }));
 
-// Compression middleware
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" },
+  crossOriginEmbedderPolicy: false
+}));
+
 app.use(compression());
-
-// Logging middleware
 app.use(morgan('combined'));
-
-// Body parser middleware
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
-// Rate limiting
+app.use('/uploads', (req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET');
+  res.header('Cross-Origin-Resource-Policy', 'cross-origin');
+  next();
+}, express.static(path.join(__dirname, 'uploads')));
+
 app.use(apiLimiter);
 
-// Health check
 app.get('/health', (req, res) => {
   res.json({ status: 'Server is running' });
 });
 
-// Database test endpoint
 app.post('/api/test-db', async (req, res) => {
   try {
     const result = await testDatabaseConnection(req.body);
@@ -60,7 +66,6 @@ app.post('/api/test-db', async (req, res) => {
   }
 });
 
-// API routes
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/voter', voterRoutes);
@@ -68,25 +73,19 @@ app.use('/api/election-officer', electionOfficerRoutes);
 app.use('/api/observer', observerRoutes);
 app.use('/api/otp', otpRoutes);
 app.use('/api/vote', voteRoutes);
+app.use('/api/location', locationRoutes);
+app.use('/api/parties', partyRoutes);
+app.use('/api/election-categories', electionCategoryRoutes);
 
-// 404 handler
 app.use(notFoundHandler);
-
-// Error handler (must be last)
 app.use(errorHandler);
 
-// Start server
 const PORT = process.env.PORT || 5000;
 
 const startServer = async () => {
   try {
-    // Test database connection
     await testConnection();
-
-    // Schedule election checks
     ElectionService.scheduleElectionChecks();
-
-    // Start listening
     app.listen(PORT, () => {
       console.log(`\n${'='.repeat(50)}`);
       console.log(`Smart E-Voting System Backend`);
