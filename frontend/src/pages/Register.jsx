@@ -4,6 +4,7 @@ import { authAPI } from '../services/api';
 import useAuthStore from '../contexts/authStore';
 import toast from 'react-hot-toast';
 import { FiMail, FiLock, FiEye, FiEyeOff, FiUser, FiPhone, FiBriefcase } from 'react-icons/fi';
+import LocationDropdown from '../components/LocationDropdown';
 
 const Register = () => {
   const navigate = useNavigate();
@@ -19,7 +20,9 @@ const Register = () => {
     password: '',
     confirmPassword: '',
     phone: '',
-    role: 'voter'
+    role: 'voter',
+    country_id: null,
+    state_id: null
   });
 
   const handleInputChange = (e) => {
@@ -67,7 +70,9 @@ const Register = () => {
         role: formData.role,
         department: formData.department || null,
         designation: formData.designation || null,
-        assignment_area: formData.assignment_area || null
+        assignment_area: formData.assignment_area || null,
+        country_id: formData.country_id || null,
+        state_id: formData.state_id || null
       });
       
       setEmail(formData.email);
@@ -185,6 +190,17 @@ const Register = () => {
                   className="flex-1 ml-2 outline-none"
                 />
               </div>
+            </div>
+
+            {/* Location Selection */}
+            <div className="col-span-2">
+              <LocationDropdown
+                countryId={formData.country_id}
+                stateId={formData.state_id}
+                onCountryChange={(value) => setFormData(prev => ({ ...prev, country_id: value, state_id: null }))}
+                onStateChange={(value) => setFormData(prev => ({ ...prev, state_id: value }))}
+                required={false}
+              />
             </div>
 
             {(formData.role === 'election_officer' || formData.role === 'observer') && (

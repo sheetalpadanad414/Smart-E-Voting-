@@ -74,9 +74,46 @@ const Login = () => {
       if (isAdmin) {
         // Direct admin login without OTP
         const response = await authAPI.adminLogin(formData);
-        login(response.data.user, response.data.token);
+        
+        console.log('✓ Admin login response:', response.data);
+        
+        // Extract user and token from response (handle both response structures)
+        const userData = response.data.data?.user || response.data.user;
+        const tokenData = response.data.data?.token || response.data.token;
+        
+        // Validate we have both user and token
+        if (!userData || !tokenData) {
+          console.error('❌ Invalid response structure:', response.data);
+          toast.error('Login failed: Invalid response from server');
+          return;
+        }
+        
+        // Validate user has required fields
+        if (!userData.role || !userData.email) {
+          console.error('❌ User data missing required fields:', userData);
+          toast.error('Login failed: Invalid user data');
+          return;
+        }
+        
+        console.log('✓ Validated user data:', { ...userData, password: undefined });
+        console.log('✓ Token received:', tokenData.substring(0, 30) + '...');
+        
+        // CRITICAL: Save to localStorage FIRST before updating state
+        localStorage.setItem('token', tokenData);
+        localStorage.setItem('user', JSON.stringify(userData));
+        
+        console.log('✓ Token and user saved to localStorage');
+        console.log('✓ Saved user:', JSON.parse(localStorage.getItem('user')));
+        
+        // Update auth state
+        login(userData, tokenData);
+        
+        console.log('✓ Auth state updated');
+        
         toast.success('Admin login successful');
-        navigate('/admin/dashboard');
+        
+        // Use window.location for guaranteed navigation
+        window.location.href = '/admin/dashboard';
       } else {
         // Regular user login - requires OTP
         const response = await authAPI.login(formData);
@@ -111,14 +148,47 @@ const Login = () => {
     try {
       setLoading(true);
       const response = await authAPI.verifyOTP({ email, otp: otpToVerify });
-      login(response.data.user, response.data.token);
+      
+      console.log('✓ OTP verified:', response.data);
+      
+      // Extract user and token from response (handle both response structures)
+      const userData = response.data.data?.user || response.data.user;
+      const tokenData = response.data.data?.token || response.data.token;
+      
+      // Validate we have both user and token
+      if (!userData || !tokenData) {
+        console.error('❌ Invalid response structure:', response.data);
+        toast.error('Verification failed: Invalid response from server');
+        return;
+      }
+      
+      // Validate user has required fields
+      if (!userData.role || !userData.email) {
+        console.error('❌ User data missing required fields:', userData);
+        toast.error('Verification failed: Invalid user data');
+        return;
+      }
+      
+      console.log('✓ Validated user data:', { ...userData, password: undefined });
+      console.log('✓ Token received:', tokenData.substring(0, 30) + '...');
+      
+      // CRITICAL: Save to localStorage FIRST
+      localStorage.setItem('token', tokenData);
+      localStorage.setItem('user', JSON.stringify(userData));
+      
+      console.log('✓ Token and user saved to localStorage');
+      console.log('✓ Saved user:', JSON.parse(localStorage.getItem('user')));
+      
+      // Update auth state
+      login(userData, tokenData);
+      
+      console.log('✓ Auth state updated');
+      
       toast.success('Login successful');
       
-      if (response.data.user.role === 'admin') {
-        navigate('/admin/dashboard');
-      } else {
-        navigate('/elections');
-      }
+      // Use window.location for guaranteed navigation
+      const targetRoute = userData.role === 'admin' ? '/admin/dashboard' : '/elections';
+      window.location.href = targetRoute;
     } catch (error) {
       toast.error(error.response?.data?.message || 'Invalid OTP');
     } finally {

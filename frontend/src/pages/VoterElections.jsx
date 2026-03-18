@@ -1,19 +1,31 @@
 import React, { useEffect, useState } from 'react';
-import { voterAPI } from '../services/api';
+import { voterAPI, locationAPI } from '../services/api';
 import toast from 'react-hot-toast';
-import { FiCalendar, FiCheckCircle, FiClock } from 'react-icons/fi';
+import { FiCalendar, FiCheckCircle, FiClock, FiMapPin, FiTag } from 'react-icons/fi';
 
 const VoterElections = () => {
   const [elections, setElections] = useState([]);
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
+  const [countries, setCountries] = useState([]);
+  const [states, setStates] = useState({});
 
   // fetchElections intentionally runs when `page` changes
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     fetchElections();
+    fetchCountries();
   }, [page]);
+
+  const fetchCountries = async () => {
+    try {
+      const response = await locationAPI.getAllCountries();
+      setCountries(response.data.countries);
+    } catch (error) {
+      console.error('Failed to load countries');
+    }
+  };
 
   const fetchElections = async () => {
     try {
@@ -21,11 +33,41 @@ const VoterElections = () => {
       const response = await voterAPI.getAvailableElections(page, 10);
       setElections(response.data.elections);
       setTotal(response.data.total);
+
+      // Fetch location names for elections with location restrictions
+      const electionsWithLocation = response.data.elections.filter(e => e.country_id || e.state_id);
+      for (const election of electionsWithLocation) {
+        if (election.country_id && !states[election.country_id]) {
+          try {
+            const statesResponse = await locationAPI.getStatesByCountry(election.country_id);
+            setStates(prev => ({ ...prev, [election.country_id]: statesResponse.data.states }));
+          } catch (error) {
+            console.error('Failed to load states');
+          }
+        }
+      }
     } catch (error) {
       toast.error('Failed to load elections');
     } finally {
       setLoading(false);
     }
+  };
+
+  const getLocationName = (election) => {
+    if (!election.country_id && !election.state_id) {
+      return null;
+    }
+
+    const country = countries.find(c => c.id === election.country_id);
+    const countryName = country ? country.name : 'Unknown';
+
+    if (election.state_id && states[election.country_id]) {
+      const state = states[election.country_id].find(s => s.id === election.state_id);
+      const stateName = state ? state.name : 'Unknown';
+      return `${countryName} - ${stateName}`;
+    }
+
+    return countryName;
   };
 
   const getStatusColor = (status, startDate, endDate) => {
@@ -70,9 +112,30 @@ const VoterElections = () => {
             {elections.map((election) => (
               <div key={election.id} className="bg-white rounded-lg shadow-md hover:shadow-lg transition p-6">
                 <div className="flex items-start justify-between mb-4">
-                  <div>
+                  <div className="flex-1">
                     <h3 className="text-xl font-semibold text-gray-800">{election.title}</h3>
                     <p className="text-sm text-gray-600 mt-1">{election.description}</p>
+                    
+                    {/* Election Type Badge */}
+                    {election.election_type && (
+                      <div className="flex items-center gap-2 mt-2">
+                        <FiTag className="text-indigo-500 text-sm" />
+                        <span className="text-xs font-medium text-indigo-600 bg-indigo-50 px-2 py-1 rounded">
+                          {election.election_type}
+                          {election.election_subtype && ` - ${election.election_subtype}`}
+                        </span>
+                      </div>
+                    )}
+                    
+                    {/* Location Badge */}
+                    {getLocationName(election) && (
+                      <div className="flex items-center gap-2 mt-2">
+                        <FiMapPin className="text-blue-500 text-sm" />
+                        <span className="text-xs font-medium text-blue-600 bg-blue-50 px-2 py-1 rounded">
+                          {getLocationName(election)}
+                        </span>
+                      </div>
+                    )}
                   </div>
                   <span className={`px-3 py-1 rounded-full text-sm font-semibold flex items-center gap-2 ${getStatusColor(election.status, election.start_date, election.end_date)}`}>
                     {getStatusIcon(election.status, election.start_date, election.end_date)}
@@ -92,27 +155,24 @@ const VoterElections = () => {
                 </div>
 
                 <div className="flex gap-2 pt-4 border-t">
-                  {election.status === 'active' && (
+                  {election.status === 'active' ? (
                     <a
                       href={`/elections/${election.id}/vote`}
-                      className="flex-1 bg-green-500 text-white py-2 rounded-lg hover:bg-green-600 transition text-center font-semibold"
+                      className="w-full bg-green-500 text-white py-2 rounded-lg hover:bg-green-600 transition text-center font-semibold"
                     >
                       Vote Now
                     </a>
-                  )}
-                  <a
-                    href={`/elections/${election.id}`}
-                    className="flex-1 bg-blue-500 text-white py-2 rounded-lg hover:bg-blue-600 transition text-center font-semibold"
-                  >
-                    View Details
-                  </a>
-                  {election.status === 'completed' && (
+                  ) : election.status === 'completed' ? (
                     <a
                       href={`/results/${election.id}`}
-                      className="flex-1 bg-purple-500 text-white py-2 rounded-lg hover:bg-purple-600 transition text-center font-semibold"
+                      className="w-full bg-purple-500 text-white py-2 rounded-lg hover:bg-purple-600 transition text-center font-semibold"
                     >
-                      Results
+                      View Results
                     </a>
+                  ) : (
+                    <div className="w-full bg-gray-100 text-gray-600 py-2 rounded-lg text-center font-semibold">
+                      Upcoming
+                    </div>
                   )}
                 </div>
               </div>

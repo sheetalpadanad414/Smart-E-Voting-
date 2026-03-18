@@ -125,72 +125,88 @@ const VoterElectionsNew = () => {
       {/* Elections Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredElections.map((election) => (
-          <Link key={election.id} to={`/elections/${election.id}`} className="group">
-            <div className="bg-white rounded-xl shadow-md hover:shadow-xl transition overflow-hidden h-full transform hover:-translate-y-1">
-              {/* Card Header with Image */}
-              <div className="bg-gradient-to-r from-blue-500 to-blue-700 p-6 flex items-center justify-center h-32">
-                <span className="text-5xl">{election.image}</span>
-              </div>
-
-              {/* Card Content */}
-              <div className="p-6">
-                {/* Status Badge */}
-                <div className="mb-3">
-                  <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(election.status)}`}>
-                    {getStatusText(election.status)}
-                  </span>
-                </div>
-
-                {/* Title */}
-                <h3 className="text-lg font-bold text-gray-900 mb-2 group-hover:text-blue-600 transition">
-                  {election.title}
-                </h3>
-
-                {/* Description */}
-                <p className="text-sm text-gray-600 mb-4 line-clamp-2">
-                  {election.description}
-                </p>
-
-                {/* Info Row */}
-                <div className="grid grid-cols-2 gap-4 mb-4 text-sm">
-                  <div className="flex items-center space-x-2 text-gray-600">
-                    <FiUsers size={16} />
-                    <span>{election.candidates} Candidates</span>
-                  </div>
-                  <div className="flex items-center space-x-2 text-gray-600">
-                    <FiVote size={16} />
-                    <span>{election.voters} Votes</span>
-                  </div>
-                </div>
-
-                {/* Date */}
-                <div className="flex items-center space-x-2 text-xs text-gray-500 mb-4">
-                  <FiCalendar size={14} />
-                  <span>{election.startDate} to {election.endDate}</span>
-                </div>
-
-                {/* Progress Bar */}
-                <div className="mb-4">
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="text-xs text-gray-600">Voter Turnout</span>
-                    <span className="text-xs font-semibold text-gray-900">{election.progress}%</span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div
-                      className="bg-gradient-to-r from-blue-500 to-blue-700 h-2 rounded-full transition-all"
-                      style={{ width: `${election.progress}%` }}
-                    ></div>
-                  </div>
-                </div>
-
-                {/* Action Button */}
-                <button className="w-full flex items-center justify-center space-x-2 bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition font-semibold">
-                  <span>View Election</span>
-                  <FiChevronRight size={16} />
-                </button>
-              </div>
+          <div key={election.id} className="bg-white rounded-xl shadow-md hover:shadow-xl transition overflow-hidden h-full transform hover:-translate-y-1">
+            {/* Card Header with Image */}
+            <div className="bg-gradient-to-r from-blue-500 to-blue-700 p-6 flex items-center justify-center h-32">
+              <span className="text-5xl">{election.image}</span>
             </div>
-          </Link>
+
+            {/* Card Content */}
+            <div className="p-6">
+              {/* Status Badge */}
+              <div className="mb-3">
+                <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(election.status)}`}>
+                  {getStatusText(election.status)}
+                </span>
+              </div>
+
+              {/* Title */}
+              <h3 className="text-lg font-bold text-gray-900 mb-2">
+                {election.title}
+              </h3>
+
+              {/* Description */}
+              <p className="text-sm text-gray-600 mb-4 line-clamp-2">
+                {election.description}
+              </p>
+
+              {/* Info Row */}
+              <div className="grid grid-cols-2 gap-4 mb-4 text-sm">
+                <div className="flex items-center space-x-2 text-gray-600">
+                  <FiUsers size={16} />
+                  <span>{election.candidates} Candidates</span>
+                </div>
+                <div className="flex items-center space-x-2 text-gray-600">
+                  <FiVote size={16} />
+                  <span>{election.voters} Votes</span>
+                </div>
+              </div>
+
+              {/* Date */}
+              <div className="flex items-center space-x-2 text-xs text-gray-500 mb-4">
+                <FiCalendar size={14} />
+                <span>{election.startDate} to {election.endDate}</span>
+              </div>
+
+              {/* Progress Bar */}
+              <div className="mb-4">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-xs text-gray-600">Voter Turnout</span>
+                  <span className="text-xs font-semibold text-gray-900">{election.progress}%</span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div
+                    className="bg-gradient-to-r from-blue-500 to-blue-700 h-2 rounded-full transition-all"
+                    style={{ width: `${election.progress}%` }}
+                  ></div>
+                </div>
+              </div>
+
+              {/* Action Button - Based on Status */}
+              {election.status === 'active' ? (
+                <Link 
+                  to={`/elections/${election.id}/vote`}
+                  className="w-full flex items-center justify-center space-x-2 bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition font-semibold"
+                >
+                  <FiVote size={16} />
+                  <span>Vote Now</span>
+                </Link>
+              ) : election.status === 'completed' ? (
+                <Link 
+                  to={`/results/${election.id}`}
+                  className="w-full flex items-center justify-center space-x-2 bg-purple-600 text-white py-2 px-4 rounded-lg hover:bg-purple-700 transition font-semibold"
+                >
+                  <FiChevronRight size={16} />
+                  <span>View Results</span>
+                </Link>
+              ) : (
+                <div className="w-full flex items-center justify-center space-x-2 bg-gray-100 text-gray-600 py-2 px-4 rounded-lg font-semibold cursor-not-allowed">
+                  <FiCalendar size={16} />
+                  <span>Upcoming</span>
+                </div>
+              )}
+            </div>
+          </div>
         ))}
       </div>
 

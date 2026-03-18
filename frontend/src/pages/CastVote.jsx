@@ -29,16 +29,33 @@ const CastVote = () => {
   const fetchElectionDetails = async () => {
     try {
       setLoading(true);
-      console.log('Fetching election details for ID:', id);
+      console.log('=== FETCH ELECTION DETAILS ===');
+      console.log('Election ID from URL params:', id);
+      console.log('API endpoint will be: /voter/elections/' + id);
+      
       const response = await voterAPI.getElectionDetails(id);
-      console.log('Election details response:', response.data);
+      
+      console.log('API Response received:', response.data);
+      console.log('Election:', response.data.election);
+      console.log('Candidates count:', response.data.candidates?.length);
+      
       setElection(response.data.election);
       setCandidates(response.data.candidates);
       setHasVoted(response.data.has_voted);
+      
+      console.log('State updated successfully');
     } catch (error) {
-      console.error('Error fetching election details:', error);
-      toast.error(error.response?.data?.error || 'Failed to load election details');
-      setTimeout(() => navigate('/elections'), 2000);
+      console.error('=== ERROR FETCHING ELECTION ===');
+      console.error('Error object:', error);
+      console.error('Error response:', error.response);
+      console.error('Error response data:', error.response?.data);
+      console.error('Error message:', error.message);
+      
+      const errorMessage = error.response?.data?.error || error.response?.data?.message || 'Failed to load election details';
+      toast.error(errorMessage);
+      
+      // Only redirect after showing error
+      setTimeout(() => navigate('/elections'), 3000);
     } finally {
       setLoading(false);
     }

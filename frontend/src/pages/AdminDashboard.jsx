@@ -12,7 +12,10 @@ const AdminDashboard = () => {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(false);
 
+  console.log('🎯 AdminDashboard - Rendered', { user });
+
   useEffect(() => {
+    console.log('🎯 AdminDashboard - useEffect triggered');
     fetchDashboard();
   }, []);
 
@@ -25,9 +28,12 @@ const AdminDashboard = () => {
   const fetchDashboard = async () => {
     try {
       setLoading(true);
+      console.log('📊 Fetching dashboard data...');
       const response = await adminAPI.getDashboard();
+      console.log('✓ Dashboard data received:', response.data);
       setStats(response.data);
     } catch (error) {
+      console.error('❌ Dashboard fetch error:', error);
       toast.error('Failed to load dashboard');
     } finally {
       setLoading(false);
@@ -35,11 +41,20 @@ const AdminDashboard = () => {
   };
 
   if (loading) {
+    console.log('⏳ AdminDashboard - Loading...');
     return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
   }
 
   if (!stats) {
-    return <div className="flex items-center justify-center min-h-screen">No data available</div>;
+    console.log('⚠️ AdminDashboard - No stats, showing placeholder');
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen">
+        <p>Loading dashboard...</p>
+        <button onClick={fetchDashboard} className="mt-4 px-4 py-2 bg-blue-500 text-white rounded">
+          Retry
+        </button>
+      </div>
+    );
   }
 
   const StatCard = ({ icon: Icon, label, value, color }) => (
@@ -153,6 +168,25 @@ const AdminDashboard = () => {
           </div>
         </div>
 
+        {/* Election Types Statistics */}
+        {stats.elections?.by_type && stats.elections.by_type.length > 0 && (
+          <div className="bg-white rounded-lg shadow-md p-6 mb-8">
+            <h2 className="text-xl font-bold text-gray-800 mb-4">Elections by Type</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+              {stats.elections.by_type.map((type) => (
+                <div key={type.election_type} className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-lg p-4 border border-indigo-100">
+                  <p className="text-indigo-700 text-sm font-semibold mb-2">{type.election_type}</p>
+                  <p className="text-3xl font-bold text-indigo-600 mb-2">{type.count}</p>
+                  <div className="flex gap-3 text-xs">
+                    <span className="text-green-600 font-medium">Active: {type.active_count}</span>
+                    <span className="text-gray-600 font-medium">Done: {type.completed_count}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className="bg-white rounded-lg shadow-md p-6">
           <h2 className="text-xl font-bold text-gray-800 mb-4">Recent Activities</h2>
           <div className="overflow-x-auto">
@@ -198,6 +232,18 @@ const AdminDashboard = () => {
             className="inline-block bg-green-500 text-white px-6 py-3 rounded-lg hover:bg-green-600 transition font-semibold"
           >
             Manage Users
+          </a>
+          <a
+            href="/admin/voters"
+            className="inline-block bg-teal-500 text-white px-6 py-3 rounded-lg hover:bg-teal-600 transition font-semibold"
+          >
+            Voter Verification Status
+          </a>
+          <a
+            href="/admin/parties"
+            className="inline-block bg-indigo-500 text-white px-6 py-3 rounded-lg hover:bg-indigo-600 transition font-semibold"
+          >
+            Manage Parties
           </a>
           <a
             href="/admin/candidates"
