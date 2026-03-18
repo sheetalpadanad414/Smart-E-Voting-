@@ -12,6 +12,8 @@ router.get('/dashboard', AdminController.getDashboard);
 
 // User management
 router.get('/users', AdminController.getAllUsers);
+router.get('/voters', AdminController.getVotersWithStatus);
+router.get('/voters/export', AdminController.exportVotersCSV);
 router.post('/users', AdminController.createUser);
 router.put('/users/:id', AdminController.updateUser);
 router.delete('/users/:id', AdminController.deleteUser);
@@ -25,6 +27,7 @@ router.delete('/elections/:id', AdminController.deleteElection);
 
 // Candidate management
 router.get('/elections/:election_id/candidates', AdminController.getCandidates);
+router.get('/parties/:party_id/candidates', AdminController.getCandidatesByParty);
 router.post('/candidates', validateCandidateCreate, AdminController.createCandidate);
 router.put('/candidates/:id', AdminController.updateCandidate);
 router.delete('/candidates/:id', AdminController.deleteCandidate);

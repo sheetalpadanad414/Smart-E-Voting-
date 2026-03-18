@@ -322,13 +322,16 @@ class AuthController {
       const token = generateToken(user.id, user.role);
 
       res.json({
+        success: true,
         message: 'Admin login successful',
-        token,
-        user: {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          role: user.role
+        data: {
+          token,
+          user: {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            role: user.role
+          }
         }
       });
 

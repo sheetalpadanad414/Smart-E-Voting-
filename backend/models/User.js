@@ -128,7 +128,7 @@ class User {
   }
 
   static async getAll(page = 1, limit = 20, filters = {}) {
-    let query = 'SELECT id, name, email, phone, role, is_verified, voter_id, department, designation, assignment_area, last_login, created_at FROM users WHERE 1=1';
+    let query = 'SELECT id, name, email, phone, role, is_verified, otp_verified, has_voted, voter_id, department, designation, assignment_area, last_login, created_at FROM users WHERE 1=1';
     const params = [];
 
     if (filters.role) {
@@ -166,6 +166,81 @@ class User {
       total: countResult[0].total,
       pages: Math.ceil(countResult[0].total / limit)
     };
+  }
+
+  static async getVotersWithStatus(page = 1, limit = 50, filters = {}) {
+    let query = 'SELECT id, name, email, phone, voter_id, is_verified, otp_verified, has_voted, last_login, created_at FROM users WHERE role = "voter"';
+    const params = [];
+
+    if (filters.is_verified !== undefined) {
+      query += ' AND is_verified = ?';
+      params.push(filters.is_verified);
+    }
+    if (filters.otp_verified !== undefined) {
+      query += ' AND otp_verified = ?';
+      params.push(filters.otp_verified);
+    }
+    if (filters.has_voted !== undefined) {
+      query += ' AND has_voted = ?';
+      params.push(filters.has_voted);
+    }
+
+    query += ' ORDER BY created_at DESC LIMIT ?, ?';
+    params.push((page - 1) * limit, limit);
+
+    const connection = await pool.getConnection();
+    const [voters] = await connection.query(query, params);
+
+    // Get total count
+    let countQuery = 'SELECT COUNT(*) as total FROM users WHERE role = "voter"';
+    const countParams = [];
+    if (filters.is_verified !== undefined) {
+      countQuery += ' AND is_verified = ?';
+      countParams.push(filters.is_verified);
+    }
+    if (filters.otp_verified !== undefined) {
+      countQuery += ' AND otp_verified = ?';
+      countParams.push(filters.otp_verified);
+    }
+    if (filters.has_voted !== undefined) {
+      countQuery += ' AND has_voted = ?';
+      countParams.push(filters.has_voted);
+    }
+
+    const [countResult] = await connection.query(countQuery, countParams);
+    connection.release();
+
+    return {
+      voters,
+      total: countResult[0].total,
+      pages: Math.ceil(countResult[0].total / limit)
+    };
+  }
+
+  static async getAllVotersForExport(filters = {}) {
+    let query = 'SELECT name, email, phone, voter_id, is_verified, otp_verified, has_voted, last_login, created_at FROM users WHERE role = "voter"';
+    const params = [];
+
+    if (filters.is_verified !== undefined) {
+      query += ' AND is_verified = ?';
+      params.push(filters.is_verified);
+    }
+    if (filters.otp_verified !== undefined) {
+      query += ' AND otp_verified = ?';
+      params.push(filters.otp_verified);
+    }
+    if (filters.has_voted !== undefined) {
+      query += ' AND has_voted = ?';
+      params.push(filters.has_voted);
+    }
+
+    query += ' ORDER BY created_at DESC';
+
+    const connection = await pool.getConnection();
+    const [voters] = await connection.query(query, params);
+    connection.release();
+
+    return voters;
   }
 
   static async updateUser(userId, updates) {

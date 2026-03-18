@@ -52,6 +52,12 @@ export const adminAPI = {
   updateUser: (id, data) => api.put(`/admin/users/${id}`, data),
   deleteUser: (id) => api.delete(`/admin/users/${id}`),
   
+  // Voters with status
+  getVotersWithStatus: (params = {}) =>
+    api.get('/admin/voters', { params }),
+  exportVotersCSV: (params = {}) =>
+    api.get('/admin/voters/export', { params, responseType: 'blob' }),
+  
   // Elections
   getAllElections: (page = 1, limit = 20, filters = {}) =>
     api.get('/admin/elections', { params: { page, limit, ...filters } }),
@@ -67,6 +73,8 @@ export const adminAPI = {
   getAllCandidates: () => api.get('/admin/candidates'),
   getCandidates: (electionId, page = 1, limit = 50) =>
     api.get(`/admin/elections/${electionId}/candidates`, { params: { page, limit } }),
+  getCandidatesByParty: (partyId, page = 1, limit = 50) =>
+    api.get(`/admin/parties/${partyId}/candidates`, { params: { page, limit } }),
   createCandidate: (data) => api.post('/admin/candidates', data),
   updateCandidate: (id, data) => api.put(`/admin/candidates/${id}`, data),
   deleteCandidate: (id) => api.delete(`/admin/candidates/${id}`),
@@ -90,6 +98,26 @@ export const voterAPI = {
   exportResultsPDF: (id) => api.get(`/voter/elections/${id}/results/export`, {
     responseType: 'blob'
   })
+};
+
+// Location endpoints
+export const locationAPI = {
+  getAllCountries: () => api.get('/location/countries'),
+  getStatesByCountry: (countryId) => api.get(`/location/countries/${countryId}/states`),
+  checkVotingEligibility: (electionId) => api.get(`/location/elections/${electionId}/eligibility`),
+  createCountry: (data) => api.post('/location/countries', data),
+  createState: (data) => api.post('/location/states', data)
+};
+
+// Party endpoints
+export const partyAPI = {
+  getAllParties: (page = 1, limit = 50, search = '') =>
+    api.get('/parties', { params: { page, limit, search } }),
+  getPartiesSimple: () => api.get('/parties/simple'),
+  getParty: (id) => api.get(`/parties/${id}`),
+  createParty: (data) => api.post('/parties', data),
+  updateParty: (id, data) => api.put(`/parties/${id}`, data),
+  deleteParty: (id) => api.delete(`/parties/${id}`)
 };
 
 export default api;

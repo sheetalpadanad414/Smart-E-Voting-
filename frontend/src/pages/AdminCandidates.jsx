@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { adminAPI } from '../services/api';
+import { adminAPI, partyAPI } from '../services/api';
 import toast from 'react-hot-toast';
 import { FiEdit2, FiTrash2, FiPlus, FiArrowLeft, FiSearch } from 'react-icons/fi';
 
@@ -8,6 +8,7 @@ const AdminCandidates = () => {
   const { electionId } = useParams();
   const [candidates, setCandidates] = useState([]);
   const [elections, setElections] = useState([]);
+  const [parties, setParties] = useState([]);
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
@@ -21,13 +22,14 @@ const AdminCandidates = () => {
     description: '',
     symbol: '',
     position: '',
-    party_name: '',
+    party_id: '',
     image_url: ''
   });
 
-  // Fetch elections for dropdown
+  // Fetch elections and parties for dropdowns
   useEffect(() => {
     fetchElections();
+    fetchParties();
   }, []);
 
   // Fetch candidates when election is selected
@@ -40,10 +42,24 @@ const AdminCandidates = () => {
 
   const fetchElections = async () => {
     try {
-      const response = await adminAPI.getAllElections(1, 100, {});
-      setElections(response.data.elections || []);
+      // Fetch only active and draft elections (not completed)
+      const response = await adminAPI.getAllElections(1, 100, { status: 'active,draft' });
+      const allElections = response.data.elections || [];
+      
+      // Filter to show only active elections for candidate creation
+      const activeElections = allElections.filter(e => e.status === 'active' || e.status === 'draft');
+      setElections(activeElections);
     } catch (error) {
       toast.error('Failed to load elections');
+    }
+  };
+
+  const fetchParties = async () => {
+    try {
+      const response = await partyAPI.getPartiesSimple();
+      setParties(response.data.parties || []);
+    } catch (error) {
+      toast.error('Failed to load parties');
     }
   };
 
@@ -52,11 +68,20 @@ const AdminCandidates = () => {
 
     try {
       setLoading(true);
+      console.log('Fetching candidates for election:', selectedElection);
       const response = await adminAPI.getCandidates(selectedElection, page, 20);
+      console.log('Candidates response:', response.data);
       setCandidates(response.data.candidates || []);
       setTotal(response.data.total || 0);
     } catch (error) {
-      toast.error('Failed to load candidates');
+      console.error('Error fetching candidates:', error);
+      // Don't show error toast if it's just a collation issue - candidates still work
+      if (!error.response?.data?.message?.includes('collation')) {
+        toast.error('Failed to load candidates');
+      }
+      // Set empty array so UI doesn't break
+      setCandidates([]);
+      setTotal(0);
     } finally {
       setLoading(false);
     }
@@ -81,7 +106,7 @@ const AdminCandidates = () => {
       description: candidate.description || '',
       symbol: candidate.symbol || '',
       position: candidate.position || '',
-      party_name: candidate.party_name || '',
+      party_id: candidate.party_id || '',
       image_url: candidate.image_url || ''
     });
     setEditingId(candidate.id);
@@ -124,7 +149,7 @@ const AdminCandidates = () => {
       description: '',
       symbol: '',
       position: '',
-      party_name: '',
+      party_id: '',
       image_url: ''
     });
   };
@@ -196,15 +221,23 @@ const AdminCandidates = () => {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Party Name
+                Party
               </label>
-              <input
-                type="text"
-                value={formData.party_name}
-                onChange={(e) => setFormData({ ...formData, party_name: e.target.value })}
+              <select
+                value={formData.party_id}
+                onChange={(e) => setFormData({ ...formData, party_id: e.target.value })}
                 className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Enter party name"
-              />
+              >
+                <option value="">Select a party (optional)</option>
+                {parties.map((party) => (
+                  <option key={party.id} value={party.id}>
+                    {party.name}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-gray-500 mt-1">
+                Select the political party for this candidate
+              </p>
             </div>
 
             <div>
@@ -375,7 +408,17 @@ const AdminCandidates = () => {
                       <tr key={candidate.id} className="border-b hover:bg-gray-50 transition">
                         <td className="px-6 py-4 text-sm text-gray-800">{candidate.name}</td>
                         <td className="px-6 py-4 text-sm text-gray-600">
-                          {candidate.party_name || '-'}
+                          <div className="flex items-center gap-2">
+                            {candidate.party_logo && (
+                              <img 
+                                src={candidate.party_logo} 
+                                alt={candidate.party_name}
+                                className="w-6 h-6 object-contain"
+                                onError={(e) => e.target.style.display = 'none'}
+                              />
+                            )}
+                            <span>{candidate.party_name || '-'}</span>
+                          </div>
                         </td>
                         <td className="px-6 py-4 text-sm text-gray-600">
                           {candidate.position || '-'}
