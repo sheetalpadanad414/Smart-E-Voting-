@@ -35,6 +35,7 @@ const Header = () => {
               <Link to="/admin/dashboard" className="px-4 py-2 rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-smooth">Dashboard</Link>
               <Link to="/admin/users" className="px-4 py-2 rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-smooth">Users</Link>
               <Link to="/admin/elections" className="px-4 py-2 rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-smooth">Elections</Link>
+              <Link to="/admin/institutional" className="px-4 py-2 rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-smooth">Institutional</Link>
             </>
           ),
           mobile: (
@@ -42,6 +43,7 @@ const Header = () => {
               <Link to="/admin/dashboard" className="px-4 py-2 rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-smooth block" onClick={() => setIsMenuOpen(false)}>Dashboard</Link>
               <Link to="/admin/users" className="px-4 py-2 rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-smooth block" onClick={() => setIsMenuOpen(false)}>Users</Link>
               <Link to="/admin/elections" className="px-4 py-2 rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-smooth block" onClick={() => setIsMenuOpen(false)}>Elections</Link>
+              <Link to="/admin/institutional" className="px-4 py-2 rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-smooth block" onClick={() => setIsMenuOpen(false)}>Institutional</Link>
             </>
           ),
           dashboard: '/admin/dashboard'

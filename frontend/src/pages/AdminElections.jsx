@@ -38,7 +38,17 @@ const AdminElections = () => {
     'Rajya Sabha': ['Regular', 'By-Election'],
     'State Assembly': ['General', 'Re-Poll'],
     'Local Body': ['Panchayat', 'Municipal', 'Ward'],
-    'Presidential': ['Regular', 'Re-Election']
+    'Presidential': ['Regular', 'Re-Election'],
+    'Vidhan Parishad': ['General', 'By-Election'],
+    'Gram Panchayat': ['General', 'By-Election'],
+    'Taluk Panchayat': ['General', 'By-Election'],
+    'Zilla Panchayat': ['General', 'By-Election'],
+    'Municipal Council': ['General', 'By-Election'],
+    'Nagar Panchayat': ['General', 'By-Election'],
+    'College': ['Student Council', 'Faculty', 'By-Election'],
+    'University': ['Student Union', 'Senate', 'By-Election'],
+    'Company Board': ['Annual', 'Special', 'By-Election'],
+    'Society Association': ['Annual', 'Special', 'By-Election']
   };
 
   // fetchElections intentionally run when `page` or `filters` change

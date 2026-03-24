@@ -65,6 +65,8 @@ const AdminCategoryElections = () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
+      
+      // Fallback: fetch from main elections API instead of category-specific
       const params = new URLSearchParams({
         page: page.toString(),
         limit: '20',
@@ -72,14 +74,17 @@ const AdminCategoryElections = () => {
       });
       
       const response = await axios.get(
-        `http://localhost:5000/api/election-categories/${categoryId}/elections?${params}`,
+        `http://localhost:5000/api/admin/elections?${params}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       
-      setElections(response.data.elections);
-      setTotal(response.data.total);
+      setElections(response.data.elections || []);
+      setTotal(response.data.total || 0);
     } catch (error) {
+      console.error('Failed to load elections:', error);
       toast.error('Failed to load elections');
+      setElections([]);
+      setTotal(0);
     } finally {
       setLoading(false);
     }
@@ -99,9 +104,14 @@ const AdminCategoryElections = () => {
         );
         toast.success('Election updated successfully');
       } else {
+        // Use main elections API instead of category-specific
         await axios.post(
-          `http://localhost:5000/api/election-categories/${categoryId}/elections`,
-          formData,
+          `http://localhost:5000/api/admin/elections`,
+          {
+            ...formData,
+            election_type: category?.category_name || null,
+            scope: 'political'
+          },
           { headers: { Authorization: `Bearer ${token}` } }
         );
         toast.success('Election created successfully');

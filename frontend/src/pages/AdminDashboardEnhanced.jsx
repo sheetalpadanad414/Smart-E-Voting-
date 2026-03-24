@@ -112,13 +112,13 @@ const AdminDashboardEnhanced = () => {
           <StatCard
             icon={FiUsers}
             label="Total Parties"
-            value={stats.parties || 0}
+            value={stats.total_parties || 0}
             bgGradient="from-purple-500 to-purple-600 dark:from-purple-600 dark:to-purple-700"
           />
           <StatCard
             icon={FiCheckSquare}
             label="Total Candidates"
-            value={stats.candidates || 0}
+            value={stats.total_candidates || 0}
             bgGradient="from-green-500 to-green-600 dark:from-green-600 dark:to-green-700"
           />
           <StatCard
@@ -231,7 +231,7 @@ const AdminDashboardEnhanced = () => {
         {/* Quick Actions */}
         <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
           <a
-            href="/admin/elections"
+            href="/admin/elections/manage"
             className="flex items-center justify-center gap-2 bg-blue-500 hover:bg-blue-600 dark:bg-blue-600 dark:hover:bg-blue-700 text-white px-6 py-4 rounded-lg transition-smooth font-semibold shadow-md card-hover"
           >
             <FiFileText />

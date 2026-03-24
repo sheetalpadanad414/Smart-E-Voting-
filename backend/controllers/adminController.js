@@ -205,6 +205,9 @@ class AdminController {
       // Log action
       AdminService.logAction(req.user.userId, 'CREATE_ELECTION', 'election', election.id, req.body, req.ip);
     } catch (error) {
+      if (error.message && error.message.includes('already exists')) {
+        return res.status(409).json({ error: error.message });
+      }
       next(error);
     }
   }
@@ -341,22 +344,34 @@ class AdminController {
   // Create candidate
   static async createCandidate(req, res, next) {
     try {
-      const { election_id, name, description, symbol, image_url, position, party_id, party_name } = req.body;
+      const { election_id, name, description, position, party_id, party_name, inst_role, organization } = req.body;
 
       const election = await Election.findById(election_id);
       if (!election) {
         return res.status(404).json({ error: 'Election not found' });
       }
 
+      const isInstitutional = ['college', 'university', 'society', 'company']
+        .includes((election.election_type || '').toLowerCase());
+
+      if (isInstitutional) {
+        if (!inst_role || !organization) {
+          return res.status(400).json({ error: 'Position and Organization are required for institutional elections' });
+        }
+        if (party_id || party_name) {
+          return res.status(400).json({ error: 'Party data is not allowed for institutional elections' });
+        }
+      }
+
       const candidate = await Candidate.create({
         election_id,
         name,
         description,
-        symbol,
-        image_url,
-        position,
-        party_id,
-        party_name // Keep for backward compatibility
+        position: isInstitutional ? null : position,
+        party_id: isInstitutional ? null : (party_id || null),
+        party_name: isInstitutional ? null : (party_name || null),
+        inst_role: isInstitutional ? inst_role : null,
+        organization: isInstitutional ? organization : null
       });
 
       res.status(201).json({
@@ -364,7 +379,6 @@ class AdminController {
         candidate
       });
 
-      // Log action
       AdminService.logAction(req.user.userId, 'CREATE_CANDIDATE', 'candidate', candidate.id, req.body, req.ip);
     } catch (error) {
       if (error.message.includes('already exists')) {

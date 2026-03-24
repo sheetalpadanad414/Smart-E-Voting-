@@ -20,6 +20,7 @@ const otpRoutes = require('./routes/otpRoutes');
 const voteRoutes = require('./routes/voteRoutes');
 const locationRoutes = require('./routes/locationRoutes');
 const partyRoutes = require('./routes/partyRoutes');
+const institutionalRoutes = require('./routes/institutionalRoutes');
 const electionCategoryRoutes = require('./routes/electionCategoryRoutes');
 
 const app = express();
@@ -75,6 +76,7 @@ app.use('/api/otp', otpRoutes);
 app.use('/api/vote', voteRoutes);
 app.use('/api/location', locationRoutes);
 app.use('/api/parties', partyRoutes);
+app.use('/api/institutional', institutionalRoutes);
 app.use('/api/election-categories', electionCategoryRoutes);
 
 app.use(notFoundHandler);

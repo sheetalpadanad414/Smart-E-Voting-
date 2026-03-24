@@ -18,10 +18,18 @@ import AdminDashboard from './pages/AdminDashboardEnhanced';
 import AdminUsers from './pages/AdminUsers';
 import AdminVoters from './pages/AdminVoters';
 import AdminElections from './pages/AdminElectionsEnhanced';
+import AdminElectionsDashboard from './pages/AdminElectionsDashboard';
+import ManageElections from './pages/ManageElections';
+import NationalElectionsManage from './pages/NationalElectionsManage';
+import StateElectionsManage from './pages/StateElectionsManage';
+import LocalElectionsManage from './pages/LocalElectionsManage';
+import InstitutionalElectionsManage from './pages/InstitutionalElectionsManage';
 import AdminElectionCategories from './pages/AdminElectionCategories';
 import AdminCategoryElections from './pages/AdminCategoryElections';
 import AdminCandidates from './pages/AdminCandidates';
 import AdminParties from './pages/AdminPartiesEnhanced';
+import InstitutionalElections from './pages/InstitutionalElections';
+import InstitutionalCandidates from './pages/InstitutionalCandidates';
 
 // Voter Pages
 import VoterElections from './pages/VoterElectionsEnhanced';
@@ -201,12 +209,19 @@ const App = () => {
         <Route path="/admin/dashboard" element={<RoleRoute allowedRoles={['admin']}><AdminDashboard /></RoleRoute>} />
         <Route path="/admin/users" element={<RoleRoute allowedRoles={['admin']}><AdminUsers /></RoleRoute>} />
         <Route path="/admin/voters" element={<RoleRoute allowedRoles={['admin']}><AdminVoters /></RoleRoute>} />
-        <Route path="/admin/elections" element={<RoleRoute allowedRoles={['admin']}><AdminElectionCategories /></RoleRoute>} />
-        <Route path="/admin/elections/category/:categoryId" element={<RoleRoute allowedRoles={['admin']}><AdminCategoryElections /></RoleRoute>} />
+        <Route path="/admin/elections" element={<RoleRoute allowedRoles={['admin']}><AdminElectionsDashboard /></RoleRoute>} />
+        <Route path="/admin/elections/manage" element={<RoleRoute allowedRoles={['admin']}><ManageElections /></RoleRoute>} />
+        <Route path="/admin/elections/national" element={<RoleRoute allowedRoles={['admin']}><NationalElectionsManage /></RoleRoute>} />
+        <Route path="/admin/elections/state" element={<RoleRoute allowedRoles={['admin']}><StateElectionsManage /></RoleRoute>} />
+        <Route path="/admin/elections/local" element={<RoleRoute allowedRoles={['admin']}><LocalElectionsManage /></RoleRoute>} />
+        <Route path="/admin/elections/institutional" element={<RoleRoute allowedRoles={['admin']}><InstitutionalElectionsManage /></RoleRoute>} />
         <Route path="/admin/elections/all" element={<RoleRoute allowedRoles={['admin']}><AdminElections /></RoleRoute>} />
+        <Route path="/admin/elections/category/:categoryId" element={<RoleRoute allowedRoles={['admin']}><AdminCategoryElections /></RoleRoute>} />
         <Route path="/admin/parties" element={<RoleRoute allowedRoles={['admin']}><AdminParties /></RoleRoute>} />
         <Route path="/admin/candidates" element={<RoleRoute allowedRoles={['admin']}><AdminCandidates /></RoleRoute>} />
         <Route path="/admin/candidates/:electionId" element={<RoleRoute allowedRoles={['admin']}><AdminCandidates /></RoleRoute>} />
+        <Route path="/admin/institutional" element={<RoleRoute allowedRoles={['admin']}><InstitutionalElections /></RoleRoute>} />
+        <Route path="/admin/institutional/candidates/:electionId" element={<RoleRoute allowedRoles={['admin']}><InstitutionalCandidates /></RoleRoute>} />
 
         {/* Voter Routes with Layout */}
         <Route path="/elections" element={<RoleRoute allowedRoles={['voter']}><Layout><VoterElections /></Layout></RoleRoute>} />
