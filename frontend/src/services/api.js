@@ -120,4 +120,19 @@ export const partyAPI = {
   deleteParty: (id) => api.delete(`/parties/${id}`)
 };
 
+// Institutional Election endpoints
+export const institutionalAPI = {
+  // Elections
+  getElections: (params = {}) => api.get('/institutional/elections', { params }),
+  createElection: (data) => api.post('/institutional/elections', data),
+  updateElection: (id, data) => api.put(`/institutional/elections/${id}`, data),
+  deleteElection: (id) => api.delete(`/institutional/elections/${id}`),
+  // Candidates
+  getCandidates: (electionId, params = {}) =>
+    api.get(`/institutional/elections/${electionId}/candidates`, { params }),
+  createCandidate: (data) => api.post('/institutional/candidates', data),
+  updateCandidate: (id, data) => api.put(`/institutional/candidates/${id}`, data),
+  deleteCandidate: (id) => api.delete(`/institutional/candidates/${id}`)
+};
+
 export default api;

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { adminAPI, locationAPI } from '../services/api';
 import toast from 'react-hot-toast';
 import { FiEdit2, FiTrash2, FiPlus, FiEye, FiMapPin, FiFilter, FiX } from 'react-icons/fi';
@@ -6,6 +7,7 @@ import LocationDropdown from '../components/LocationDropdown';
 import { TableSkeleton } from '../components/LoadingSkeleton';
 
 const AdminElectionsEnhanced = () => {
+  const [searchParams] = useSearchParams();
   const [elections, setElections] = useState([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
@@ -40,6 +42,17 @@ const AdminElectionsEnhanced = () => {
     'Local Body': ['Panchayat', 'Municipal', 'Ward'],
     'Presidential': ['Regular', 'Re-Election']
   };
+
+  // Initialize filters from URL parameters
+  useEffect(() => {
+    const typeParam = searchParams.get('type');
+    const categoryParam = searchParams.get('category');
+    
+    if (typeParam) {
+      setFilters(prev => ({ ...prev, election_type: typeParam }));
+    }
+    // Category filtering can be added if needed
+  }, [searchParams]);
 
   useEffect(() => {
     fetchElections();

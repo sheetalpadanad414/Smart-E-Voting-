@@ -17,12 +17,23 @@ class Election {
 
     const id = generateUUID();
 
+    const connection = await pool.getConnection();
+
+    // Prevent duplicate titles (case-insensitive)
+    const [existing] = await connection.query(
+      'SELECT id FROM elections WHERE LOWER(title) = LOWER(?)',
+      [title.trim()]
+    );
+    if (existing.length > 0) {
+      connection.release();
+      throw new Error(`An election with the title "${title}" already exists`);
+    }
+
     const query = `
       INSERT INTO elections (id, title, description, start_date, end_date, is_public, country_id, state_id, election_type, election_subtype, created_by, status)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft')
     `;
 
-    const connection = await pool.getConnection();
     try {
       await connection.query(query, [
         id,
@@ -83,7 +94,7 @@ class Election {
 
   static async getAll(page = 1, limit = 20, filters = {}) {
     let query = `
-      SELECT id, title, description, start_date, end_date, status, is_public, country_id, state_id, election_type, election_subtype, created_at 
+      SELECT id, title, description, start_date, end_date, status, is_public, country_id, state_id, election_type, election_subtype, scope, created_at 
       FROM elections WHERE 1=1
     `;
     const params = [];

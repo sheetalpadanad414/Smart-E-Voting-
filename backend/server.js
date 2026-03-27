@@ -8,7 +8,6 @@ const { testConnection } = require('./config/database');
 const ElectionService = require('./services/electionService');
 const { errorHandler, notFoundHandler } = require('./middleware/errorHandler');
 const { apiLimiter } = require('./middleware/rateLimiter');
-const testDatabaseConnection = require('./testDbConnection');
 require('dotenv').config();
 
 const authRoutes = require('./routes/authRoutes');
@@ -20,6 +19,7 @@ const otpRoutes = require('./routes/otpRoutes');
 const voteRoutes = require('./routes/voteRoutes');
 const locationRoutes = require('./routes/locationRoutes');
 const partyRoutes = require('./routes/partyRoutes');
+const institutionalRoutes = require('./routes/institutionalRoutes');
 const electionCategoryRoutes = require('./routes/electionCategoryRoutes');
 
 const app = express();
@@ -53,19 +53,6 @@ app.get('/health', (req, res) => {
   res.json({ status: 'Server is running' });
 });
 
-app.post('/api/test-db', async (req, res) => {
-  try {
-    const result = await testDatabaseConnection(req.body);
-    if (result.success) {
-      res.json(result);
-    } else {
-      res.status(400).json(result);
-    }
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/voter', voterRoutes);
@@ -75,6 +62,7 @@ app.use('/api/otp', otpRoutes);
 app.use('/api/vote', voteRoutes);
 app.use('/api/location', locationRoutes);
 app.use('/api/parties', partyRoutes);
+app.use('/api/institutional', institutionalRoutes);
 app.use('/api/election-categories', electionCategoryRoutes);
 
 app.use(notFoundHandler);

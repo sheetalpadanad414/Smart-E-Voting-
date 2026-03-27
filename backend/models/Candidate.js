@@ -7,16 +7,15 @@ class Candidate {
       election_id,
       name,
       description,
-      symbol,
-      image_url,
       position,
       party_id,
-      party_name // Keep for backward compatibility
+      party_name,
+      inst_role,
+      organization
     } = candidateData;
 
     const connection = await pool.getConnection();
     try {
-      // Validate election exists and is not completed
       const [elections] = await connection.query(
         'SELECT status FROM elections WHERE id = ?',
         [election_id]
@@ -30,7 +29,6 @@ class Candidate {
         throw new Error('Cannot add candidate to completed election');
       }
 
-      // Check for duplicate candidate name in same election
       const [existing] = await connection.query(
         'SELECT id FROM candidates WHERE election_id = ? AND name = ?',
         [election_id, name]
@@ -43,7 +41,7 @@ class Candidate {
       const id = generateUUID();
 
       const query = `
-        INSERT INTO candidates (id, election_id, name, description, symbol, image_url, position, party_id, party_name)
+        INSERT INTO candidates (id, election_id, name, description, position, party_id, party_name, inst_role, organization)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
       `;
 
@@ -52,15 +50,15 @@ class Candidate {
         election_id,
         name,
         description,
-        symbol,
-        image_url,
-        position,
+        position || null,
         party_id || null,
-        party_name || null
+        party_name || null,
+        inst_role || null,
+        organization || null
       ]);
-      
+
       connection.release();
-      return { id, name, party_id };
+      return { id, name, party_id, inst_role, organization };
     } catch (error) {
       connection.release();
       throw error;
@@ -165,7 +163,7 @@ class Candidate {
   }
 
   static async update(candidateId, updates) {
-    const allowedFields = ['name', 'description', 'symbol', 'image_url', 'position', 'party_id', 'party_name'];
+    const allowedFields = ['name', 'description', 'position', 'party_id', 'party_name', 'inst_role', 'organization'];
     const updateFields = [];
     const values = [];
 
