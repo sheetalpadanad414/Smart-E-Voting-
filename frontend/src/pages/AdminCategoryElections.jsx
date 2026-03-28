@@ -129,7 +129,13 @@ const AdminCategoryElections = () => {
       setShowForm(false);
       fetchElections();
     } catch (error) {
-      toast.error(error.response?.data?.error || 'Operation failed');
+      const errorMessage = error.response?.data?.error || error.response?.data?.message || 'Operation failed';
+      
+      if (error.response?.status === 409) {
+        toast.error(`${errorMessage}. Please use a different title.`, { duration: 5000 });
+      } else {
+        toast.error(errorMessage);
+      }
     } finally {
       setLoading(false);
     }
