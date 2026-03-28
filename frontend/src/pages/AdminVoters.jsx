@@ -8,6 +8,13 @@ const AdminVoters = () => {
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
+  const [stats, setStats] = useState({
+    total: 0,
+    verified: 0,
+    otp_verified: 0,
+    otp_not_verified: 0,
+    has_voted: 0
+  });
   const [filters, setFilters] = useState({
     verified: '',
     otp_verified: '',
@@ -29,6 +36,11 @@ const AdminVoters = () => {
       const response = await adminAPI.getVotersWithStatus(params);
       setVoters(response.data.voters);
       setTotal(response.data.total);
+      
+      // Update stats from backend response
+      if (response.data.stats) {
+        setStats(response.data.stats);
+      }
     } catch (error) {
       toast.error('Failed to load voters');
     } finally {
@@ -158,24 +170,24 @@ const AdminVoters = () => {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
           <div className="bg-white rounded-lg shadow-md p-6">
             <h3 className="text-sm font-medium text-gray-600 mb-2">Total Voters</h3>
-            <p className="text-3xl font-bold text-gray-800">{total}</p>
+            <p className="text-3xl font-bold text-gray-800">{stats.total}</p>
           </div>
           <div className="bg-green-50 rounded-lg shadow-md p-6">
             <h3 className="text-sm font-medium text-green-600 mb-2">Verified</h3>
             <p className="text-3xl font-bold text-green-700">
-              {voters.filter(v => v.is_verified).length}
+              {stats.verified}
             </p>
           </div>
           <div className="bg-blue-50 rounded-lg shadow-md p-6">
             <h3 className="text-sm font-medium text-blue-600 mb-2">OTP Verified</h3>
             <p className="text-3xl font-bold text-blue-700">
-              {voters.filter(v => v.otp_verified).length}
+              {stats.otp_verified}
             </p>
           </div>
           <div className="bg-purple-50 rounded-lg shadow-md p-6">
             <h3 className="text-sm font-medium text-purple-600 mb-2">Has Voted</h3>
             <p className="text-3xl font-bold text-purple-700">
-              {voters.filter(v => v.has_voted).length}
+              {stats.has_voted}
             </p>
           </div>
         </div>
@@ -210,21 +222,21 @@ const AdminVoters = () => {
                         <td className="px-6 py-3 text-gray-600">{voter.phone || '-'}</td>
                         <td className="px-6 py-3 text-gray-600">{voter.voter_id || '-'}</td>
                         <td className="px-6 py-3 text-center">
-                          {voter.is_verified ? (
+                          {voter.is_verified === true || voter.is_verified === 1 ? (
                             <FiCheckCircle className="inline text-green-500 text-xl" />
                           ) : (
                             <FiXCircle className="inline text-red-500 text-xl" />
                           )}
                         </td>
                         <td className="px-6 py-3 text-center">
-                          {voter.otp_verified ? (
+                          {voter.otp_verified === true || voter.otp_verified === 1 ? (
                             <FiCheckCircle className="inline text-blue-500 text-xl" />
                           ) : (
                             <FiXCircle className="inline text-gray-400 text-xl" />
                           )}
                         </td>
                         <td className="px-6 py-3 text-center">
-                          {voter.has_voted ? (
+                          {voter.has_voted === true || voter.has_voted === 1 ? (
                             <FiCheckCircle className="inline text-purple-500 text-xl" />
                           ) : (
                             <FiXCircle className="inline text-gray-400 text-xl" />

@@ -217,6 +217,45 @@ class User {
     };
   }
 
+  static async getVoterStats() {
+    const connection = await pool.getConnection();
+    
+    // Get total voters count
+    const [totalResult] = await connection.query(
+      'SELECT COUNT(*) as total FROM users WHERE role = "voter"'
+    );
+    
+    // Get verified count (is_verified = true)
+    const [verifiedResult] = await connection.query(
+      'SELECT COUNT(*) as total FROM users WHERE role = "voter" AND is_verified = true'
+    );
+    
+    // Get OTP verified count (otp_verified = true)
+    const [otpVerifiedResult] = await connection.query(
+      'SELECT COUNT(*) as total FROM users WHERE role = "voter" AND otp_verified = true'
+    );
+    
+    // Get OTP not verified count (otp_verified = false OR otp_verified IS NULL)
+    const [otpNotVerifiedResult] = await connection.query(
+      'SELECT COUNT(*) as total FROM users WHERE role = "voter" AND (otp_verified = false OR otp_verified IS NULL)'
+    );
+    
+    // Get has voted count (has_voted = true)
+    const [hasVotedResult] = await connection.query(
+      'SELECT COUNT(*) as total FROM users WHERE role = "voter" AND has_voted = true'
+    );
+    
+    connection.release();
+    
+    return {
+      total: totalResult[0].total,
+      verified: verifiedResult[0].total,
+      otp_verified: otpVerifiedResult[0].total,
+      otp_not_verified: otpNotVerifiedResult[0].total,
+      has_voted: hasVotedResult[0].total
+    };
+  }
+
   static async getAllVotersForExport(filters = {}) {
     let query = 'SELECT name, email, phone, voter_id, is_verified, otp_verified, has_voted, last_login, created_at FROM users WHERE role = "voter"';
     const params = [];

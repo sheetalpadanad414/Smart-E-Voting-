@@ -55,12 +55,16 @@ class AdminController {
       if (hasVoted !== undefined) filters.has_voted = hasVoted === 'true';
 
       const result = await User.getVotersWithStatus(page, limit, filters);
+      
+      // Get total counts for all statuses (regardless of filters)
+      const stats = await User.getVoterStats();
 
       res.json({
         total: result.total,
         pages: result.pages,
         current_page: page,
-        voters: result.voters
+        voters: result.voters,
+        stats: stats // Add stats to response
       });
     } catch (error) {
       next(error);
