@@ -1,19 +1,19 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { authAPI } from '../services/api';
+import { authAPI, voterAPI } from '../services/api';
 import useAuthStore from '../contexts/authStore';
 import toast from 'react-hot-toast';
 import { FiMail, FiLock, FiEye, FiEyeOff, FiUser, FiPhone, FiBriefcase } from 'react-icons/fi';
 import LocationDropdown from '../components/LocationDropdown';
+import FaceRegistration from '../components/FaceRegistration';
 
 const Register = () => {
-  const navigate = useNavigate();
   const login = useAuthStore((state) => state.login);
-  const [step, setStep] = useState('register'); // register, otp
+  const [step, setStep] = useState('register'); // register, otp, face
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState('');
   const [otp, setOtp] = useState('');
+  const [showFaceRegistration, setShowFaceRegistration] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -107,16 +107,161 @@ const Register = () => {
         email,
         otp
       });
-      login(response.data.user, response.data.token);
+      
+      console.log('✅ OTP Verified:', response.data);
+      console.log('👤 User Role:', response.data.user.role);
+      
       toast.success('Email verified successfully');
       
-      // Redirect based on role
-      navigate('/voter/elections');
+      // Show face registration modal for voters
+      if (response.data.user.role === 'voter') {
+        console.log('🎭 Showing face registration modal for voter');
+        
+        // IMPORTANT: Store credentials in sessionStorage ONLY during face registration
+        // This prevents the route guard from redirecting
+        sessionStorage.setItem('pendingUser', JSON.stringify(response.data.user));
+        sessionStorage.setItem('pendingToken', response.data.token);
+        sessionStorage.setItem('faceRegistrationInProgress', 'true');
+        
+        console.log('✅ Credentials stored in sessionStorage');
+        console.log('🔑 Token:', response.data.token.substring(0, 20) + '...');
+        
+        // IMPORTANT: Set state and force re-render
+        setShowFaceRegistration(true);
+        setStep('face'); // Add a new step to prevent form from showing
+        console.log('✅ showFaceRegistration set to TRUE');
+      } else {
+        console.log('➡️ Non-voter, logging in and redirecting to dashboard');
+        // Non-voters login immediately and go to their dashboard
+        const userData = response.data.user;
+        const tokenData = response.data.token;
+        localStorage.setItem('token', tokenData);
+        localStorage.setItem('user', JSON.stringify(userData));
+        login(userData, tokenData);
+        
+        setTimeout(() => {
+          window.location.href = response.data.user.role === 'admin' ? '/admin/dashboard' : '/elections';
+        }, 1000);
+      }
     } catch (error) {
+      console.error('❌ OTP Verification Error:', error);
       toast.error(error.response?.data?.error || 'OTP verification failed');
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleFaceRegistrationSuccess = async () => {
+    setShowFaceRegistration(false);
+    
+    // Get pending credentials from sessionStorage
+    const pendingUser = sessionStorage.getItem('pendingUser');
+    const pendingToken = sessionStorage.getItem('pendingToken');
+    
+    if (pendingUser && pendingToken) {
+      // Move credentials to localStorage for permanent storage
+      localStorage.setItem('token', pendingToken);
+      localStorage.setItem('user', pendingUser);
+      
+      // Update auth state
+      const userObj = JSON.parse(pendingUser);
+      login(userObj, pendingToken);
+      
+      // Clear session storage
+      sessionStorage.removeItem('pendingUser');
+      sessionStorage.removeItem('pendingToken');
+      sessionStorage.removeItem('faceRegistrationInProgress');
+      
+      console.log('✅ Face registered successfully, user logged in');
+      console.log('🔑 Token moved to localStorage');
+      
+      // Show success message
+      toast.success('Face Registered Successfully! Finding active election...');
+      
+      // Try to find first active election and redirect to voting page
+      try {
+        console.log('🔍 Fetching active elections...');
+        const response = await voterAPI.getAvailableElections(1, 200);
+        const elections = response.data.elections || [];
+        
+        console.log(`📊 Found ${elections.length} total elections`);
+        
+        // Find first active election
+        const now = new Date();
+        const activeElection = elections.find(election => {
+          const start = new Date(election.start_date);
+          const end = new Date(election.end_date);
+          const isActive = election.status === 'active' && now >= start && now <= end;
+          
+          if (isActive) {
+            console.log('✅ Found active election:', election.title, `(ID: ${election.id})`);
+          }
+          
+          return isActive;
+        });
+        
+        if (activeElection) {
+          console.log('🎯 Redirecting to voting page for election:', activeElection.id);
+          toast.success(`Redirecting to vote in: ${activeElection.title}`);
+          
+          setTimeout(() => {
+            window.location.href = `/elections/${activeElection.id}/vote`;
+          }, 2000);
+        } else {
+          console.log('⚠️ No active elections found, redirecting to elections page');
+          toast.info('No active elections at the moment. Redirecting to elections page...');
+          
+          setTimeout(() => {
+            window.location.href = '/elections';
+          }, 2000);
+        }
+      } catch (error) {
+        console.error('❌ Error fetching elections:', error);
+        console.log('🔄 Falling back to elections page');
+        toast.info('Redirecting to elections page...');
+        
+        setTimeout(() => {
+          window.location.href = '/elections';
+        }, 2000);
+      }
+    } else {
+      console.error('❌ No pending credentials found');
+      toast.error('Session expired. Please login again.');
+      setTimeout(() => {
+        window.location.href = '/login';
+      }, 2000);
+    }
+  };
+
+  const handleFaceRegistrationCancel = () => {
+    setShowFaceRegistration(false);
+    
+    // Get pending credentials
+    const pendingUser = sessionStorage.getItem('pendingUser');
+    const pendingToken = sessionStorage.getItem('pendingToken');
+    
+    if (pendingUser && pendingToken) {
+      // Move to localStorage even if face registration is skipped
+      localStorage.setItem('token', pendingToken);
+      localStorage.setItem('user', pendingUser);
+      
+      // Update auth state
+      const userObj = JSON.parse(pendingUser);
+      login(userObj, pendingToken);
+      
+      // Clear session storage
+      sessionStorage.removeItem('pendingUser');
+      sessionStorage.removeItem('pendingToken');
+      sessionStorage.removeItem('faceRegistrationInProgress');
+    }
+    
+    console.log('⏭️ Face registration skipped, redirecting to elections');
+    toast.info('You can register your face later from your profile.');
+    
+    // Use window.location.href for full page reload
+    setTimeout(() => {
+      window.location.href = '/elections';
+    }, 1000);
   };
 
   const handleResendOTP = async () => {
@@ -140,10 +285,30 @@ const Register = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center p-4">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl p-8">
-        <h2 className="text-3xl font-bold text-gray-800 mb-2">Smart E-Voting</h2>
-        <p className="text-gray-600 mb-6">Create your account</p>
+    <>
+      {console.log('🔍 Register Component - State:', { step, showFaceRegistration })}
+      
+      {/* Face Registration Modal - Show when step is 'face' */}
+      {step === 'face' && showFaceRegistration && (
+        <>
+          {console.log('✅ Rendering FaceRegistration component')}
+          {console.log('📋 Callbacks:', { 
+            hasOnSuccess: !!handleFaceRegistrationSuccess, 
+            hasOnCancel: !!handleFaceRegistrationCancel 
+          })}
+          <FaceRegistration 
+            onSuccess={handleFaceRegistrationSuccess}
+            onCancel={handleFaceRegistrationCancel}
+          />
+        </>
+      )}
+      
+      {/* Only show registration form if not in face step */}
+      {step !== 'face' && (
+        <div className="min-h-screen bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl p-8">
+            <h2 className="text-3xl font-bold text-gray-800 mb-2">Smart E-Voting</h2>
+            <p className="text-gray-600 mb-6">Create your account</p>
 
         {step === 'register' ? (
           <form onSubmit={handleRegister} className="space-y-4">
@@ -350,8 +515,10 @@ const Register = () => {
             </button>
           </form>
         )}
+        </div>
       </div>
-    </div>
+      )}
+    </>
   );
 };
 
