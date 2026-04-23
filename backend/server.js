@@ -21,6 +21,7 @@ const locationRoutes = require('./routes/locationRoutes');
 const partyRoutes = require('./routes/partyRoutes');
 const institutionalRoutes = require('./routes/institutionalRoutes');
 const electionCategoryRoutes = require('./routes/electionCategoryRoutes');
+const faceRoutes = require('./routes/faceRoutes');
 
 const app = express();
 
@@ -64,6 +65,7 @@ app.use('/api/location', locationRoutes);
 app.use('/api/parties', partyRoutes);
 app.use('/api/institutional', institutionalRoutes);
 app.use('/api/election-categories', electionCategoryRoutes);
+app.use('/api/face', faceRoutes);
 
 app.use(notFoundHandler);
 app.use(errorHandler);
