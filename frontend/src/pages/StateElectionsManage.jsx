@@ -54,7 +54,14 @@ const StateElectionsManage = () => {
       fetchElections();
     } catch (error) {
       console.error('Submit error:', error);
-      toast.error(error.response?.data?.message || 'Operation failed');
+      
+      // Handle duplicate title error (409 Conflict)
+      if (error.response?.status === 409) {
+        const errorMsg = error.response?.data?.error || error.response?.data?.message || 'An election with this title already exists';
+        toast.error(`${errorMsg}. Please use a different title.`, { duration: 5000 });
+      } else {
+        toast.error(error.response?.data?.message || error.response?.data?.error || 'Operation failed');
+      }
     }
   };
 
