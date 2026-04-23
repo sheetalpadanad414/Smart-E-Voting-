@@ -5,13 +5,11 @@ import useAuthStore from '../contexts/authStore';
 import toast from 'react-hot-toast';
 import { FiMail, FiLock, FiEye, FiEyeOff, FiUser, FiPhone, FiBriefcase } from 'react-icons/fi';
 import LocationDropdown from '../components/LocationDropdown';
-import FaceCapture from '../components/FaceCapture';
-import axios from 'axios';
 
 const Register = () => {
   const navigate = useNavigate();
   const login = useAuthStore((state) => state.login);
-  const [step, setStep] = useState('register'); // register, otp, face
+  const [step, setStep] = useState('register'); // register, otp
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState('');
@@ -109,52 +107,16 @@ const Register = () => {
         email,
         otp
       });
-      
-      // Store token and user
       login(response.data.user, response.data.token);
       toast.success('Email verified successfully');
       
-      // Move to face registration step
-      setStep('face');
-      
+      // Redirect based on role
+      navigate('/voter/elections');
     } catch (error) {
       toast.error(error.response?.data?.error || 'OTP verification failed');
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleFaceCapture = async (descriptor) => {
-    try {
-      setLoading(true);
-      console.log('📤 Sending face descriptor to backend...');
-      
-      const token = localStorage.getItem('token');
-      const response = await axios.post(
-        'http://localhost:5000/api/face/store-descriptor',
-        { descriptor },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      
-      console.log('✅ Face registered:', response.data);
-      toast.success('Face registered successfully!');
-      
-      // Navigate to elections
-      navigate('/elections');
-      
-    } catch (error) {
-      console.error('❌ Face registration error:', error);
-      toast.error('Failed to register face. You can try again later from settings.');
-      // Still navigate even if face registration fails
-      navigate('/elections');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleSkipFace = () => {
-    toast.info('You can register your face later from settings');
-    navigate('/elections');
   };
 
   const handleResendOTP = async () => {
@@ -341,7 +303,7 @@ const Register = () => {
               </a>
             </p>
           </form>
-        ) : step === 'otp' ? (
+        ) : (
           <form onSubmit={handleVerifyOTP} className="space-y-4">
             <p className="text-gray-600 mb-4">
               An OTP has been sent to <strong>{email}</strong>
@@ -387,12 +349,7 @@ const Register = () => {
               Back to Register
             </button>
           </form>
-        ) : step === 'face' ? (
-          <FaceCapture
-            onCapture={handleFaceCapture}
-            onSkip={handleSkipFace}
-          />
-        ) : null}
+        )}
       </div>
     </div>
   );

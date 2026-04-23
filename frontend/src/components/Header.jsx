@@ -15,18 +15,9 @@ const Header = () => {
   const navigate = useNavigate();
 
   const handleLogout = () => {
-    console.log('🚪 Logout button clicked');
-    try {
-      logout();
-      console.log('✓ Logout successful, navigating to login...');
-      setIsMenuOpen(false);
-      // Use window.location for guaranteed navigation and state cleanup
-      window.location.href = '/login';
-    } catch (error) {
-      console.error('❌ Logout error:', error);
-      // Fallback: force navigation anyway
-      window.location.href = '/login';
-    }
+    logout();
+    navigate('/login');
+    setIsMenuOpen(false);
   };
 
   const toggleMenu = () => {
