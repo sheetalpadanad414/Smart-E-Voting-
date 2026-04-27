@@ -10,6 +10,7 @@ import Home from './pages/Home';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import VerifyOTP from './pages/VerifyOTP';
+import FaceVerification from './pages/FaceVerification';
 import CastVote from './pages/CastVote';
 import VoteSuccess from './pages/VoteSuccess';
 
@@ -166,6 +167,14 @@ const App = () => {
           path="/register" 
           element={
             (() => {
+              // Check if face registration is in progress
+              const faceRegistrationInProgress = sessionStorage.getItem('faceRegistrationInProgress');
+              
+              // If face registration in progress, allow access to register page
+              if (faceRegistrationInProgress === 'true') {
+                return <Layout><Register /></Layout>;
+              }
+              
               const tokenFromStorage = localStorage.getItem('token');
               const userFromStorage = localStorage.getItem('user');
               let userObj = null;
@@ -200,6 +209,7 @@ const App = () => {
           } 
         />
         <Route path="/verify-otp" element={<VerifyOTP />} />
+        <Route path="/face-verification" element={<RoleRoute allowedRoles={['voter']}><FaceVerification /></RoleRoute>} />
         <Route path="/cast-vote" element={<CastVote />} />
         <Route path="/vote-success" element={<VoteSuccess />} />
         <Route path="/results" element={<ElectionResultsPage />} />
