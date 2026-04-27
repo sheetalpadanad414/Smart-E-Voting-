@@ -209,7 +209,7 @@ const Register = () => {
           }, 2000);
         } else {
           console.log('⚠️ No active elections found, redirecting to elections page');
-          toast.info('No active elections at the moment. Redirecting to elections page...');
+          toast('No active elections at the moment. Redirecting to elections page...');
           
           setTimeout(() => {
             window.location.href = '/elections';
@@ -218,7 +218,7 @@ const Register = () => {
       } catch (error) {
         console.error('❌ Error fetching elections:', error);
         console.log('🔄 Falling back to elections page');
-        toast.info('Redirecting to elections page...');
+        toast('Redirecting to elections page...');
         
         setTimeout(() => {
           window.location.href = '/elections';
@@ -256,7 +256,7 @@ const Register = () => {
     }
     
     console.log('⏭️ Face registration skipped, redirecting to elections');
-    toast.info('You can register your face later from your profile.');
+    toast('You can register your face later from your profile.');
     
     // Use window.location.href for full page reload
     setTimeout(() => {

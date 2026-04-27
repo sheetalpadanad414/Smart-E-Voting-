@@ -100,7 +100,7 @@ const FaceVerification = () => {
   };
 
   const useFallback = () => {
-    toast.info('Redirecting to OTP verification...');
+    toast('Redirecting to OTP verification...');
     navigate('/verify-otp');
   };
 

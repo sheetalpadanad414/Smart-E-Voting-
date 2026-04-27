@@ -50,7 +50,7 @@ const VerifyOTP = () => {
               navigate('/face-verification');
             } else {
               // No face registered, go directly to elections
-              toast.info('Face not registered. You can register it from your profile.');
+              toast('Face not registered. You can register it from your profile.');
               navigate('/elections');
             }
           } catch (error) {

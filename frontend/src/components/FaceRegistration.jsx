@@ -163,7 +163,7 @@ const FaceRegistration = ({ onSuccess, onCancel }) => {
         
         // Fallback to elections page
         console.log('🔄 No active election, redirecting to elections page');
-        toast.info('Redirecting to Elections...');
+        toast('Redirecting to Elections...');
         setTimeout(() => {
           window.location.href = '/elections';
         }, 1500);
