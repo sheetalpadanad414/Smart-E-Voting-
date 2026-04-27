@@ -1,15 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import axios from 'axios';
+import { authAPI, faceAPI } from '../services/api';
+import useAuthStore from '../contexts/authStore';
 import toast from 'react-hot-toast';
 import { FiKey, FiRefreshCw } from 'react-icons/fi';
-
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
 const VerifyOTP = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const login = useAuthStore((state) => state.login);
   const email = location.state?.email || '';
+  const isLoginFlow = location.state?.isLoginFlow || false;
   
   const [otp, setOtp] = useState('');
   const [loading, setLoading] = useState(false);
@@ -18,8 +19,8 @@ const VerifyOTP = () => {
     e.preventDefault();
 
     if (!email) {
-      toast.error('Email not found. Please register again.');
-      navigate('/register');
+      toast.error('Email not found. Please login again.');
+      navigate('/login');
       return;
     }
 
@@ -30,16 +31,37 @@ const VerifyOTP = () => {
 
     try {
       setLoading(true);
-      const response = await axios.post(`${API_URL}/otp/verify`, {
+      const response = await authAPI.verifyOTP({
         email,
         otp
       });
 
       if (response.data.success) {
+        // Store auth data
+        login(response.data.user, response.data.token);
         toast.success('OTP verified successfully!');
-        // Store user info
-        localStorage.setItem('user', JSON.stringify(response.data.user));
-        navigate('/cast-vote', { state: { user: response.data.user } });
+        
+        // For login flow with voters, check if face is registered
+        if (isLoginFlow && response.data.user.role === 'voter') {
+          try {
+            const faceStatus = await faceAPI.getFaceStatus();
+            if (faceStatus.data.data.registered) {
+              // Face registered, redirect to face verification
+              navigate('/face-verification');
+            } else {
+              // No face registered, go directly to elections
+              toast('Face not registered. You can register it from your profile.');
+              navigate('/elections');
+            }
+          } catch (error) {
+            // If face status check fails, go to elections
+            navigate('/elections');
+          }
+        } else {
+          // Non-voters or registration flow
+          const redirectPath = response.data.user.role === 'admin' ? '/admin/dashboard' : '/elections';
+          navigate(redirectPath);
+        }
       }
     } catch (error) {
       toast.error(error.response?.data?.error || 'OTP verification failed');
@@ -56,13 +78,15 @@ const VerifyOTP = () => {
 
     try {
       setLoading(true);
-      const response = await axios.post(`${API_URL}/otp/resend`, { email });
+      const response = await authAPI.resendOTP({ email });
       
-      if (response.data.success) {
+      // Auto-populate OTP in development mode
+      if (response.data.developmentOTP) {
+        setOtp(response.data.developmentOTP);
+        toast.success(`Development OTP: ${response.data.developmentOTP}`);
+        console.log('🔐 Auto-filled development OTP:', response.data.developmentOTP);
+      } else {
         toast.success('New OTP sent successfully!');
-        // Show OTP in console for testing (remove in production)
-        console.log('New OTP:', response.data.otp);
-        toast.success(`Your OTP: ${response.data.otp}`, { duration: 10000 });
       }
     } catch (error) {
       toast.error(error.response?.data?.error || 'Failed to resend OTP');
@@ -129,16 +153,16 @@ const VerifyOTP = () => {
           <div className="text-center">
             <button
               type="button"
-              onClick={() => navigate('/register')}
+              onClick={() => navigate(isLoginFlow ? '/login' : '/register')}
               className="text-gray-600 hover:text-gray-800 text-sm"
             >
-              Back to Registration
+              Back to {isLoginFlow ? 'Login' : 'Registration'}
             </button>
           </div>
         </form>
 
-        <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-          <p className="text-xs text-yellow-800">
+        <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+          <p className="text-xs text-blue-800">
             <strong>Note:</strong> For testing purposes, the OTP will be displayed in a toast notification.
             In production, it should be sent via email/SMS.
           </p>

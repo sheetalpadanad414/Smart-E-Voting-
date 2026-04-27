@@ -186,6 +186,20 @@ const Login = () => {
       
       toast.success('Login successful');
       
+      // For voters, check if face is registered and redirect to face verification
+      if (userData.role === 'voter') {
+        try {
+          const faceStatus = await authAPI.getProfile();
+          if (faceStatus.data.user.face_verified) {
+            // Face registered, redirect to face verification
+            window.location.href = '/face-verification';
+            return;
+          }
+        } catch (error) {
+          console.log('Face status check failed, proceeding to elections');
+        }
+      }
+      
       // Use window.location for guaranteed navigation
       const targetRoute = userData.role === 'admin' ? '/admin/dashboard' : '/elections';
       window.location.href = targetRoute;

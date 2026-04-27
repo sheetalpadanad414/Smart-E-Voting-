@@ -9,7 +9,12 @@ const api = axios.create({
 
 // Add token to requests
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
+  // Check localStorage first, then sessionStorage (for face registration flow)
+  let token = localStorage.getItem('token');
+  if (!token) {
+    token = sessionStorage.getItem('pendingToken');
+  }
+  
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -133,6 +138,24 @@ export const institutionalAPI = {
   createCandidate: (data) => api.post('/institutional/candidates', data),
   updateCandidate: (id, data) => api.put(`/institutional/candidates/${id}`, data),
   deleteCandidate: (id) => api.delete(`/institutional/candidates/${id}`)
+};
+
+// Face Recognition endpoints (client-side processing)
+export const faceAPI = {
+  storeFaceDescriptor: (descriptor) => 
+    api.post('/face/store-descriptor', { descriptor }),
+  
+  getFaceDescriptor: () => 
+    api.get('/face/get-descriptor'),
+  
+  logVerification: (verified, similarity) => 
+    api.post('/face/log-verification', { verified, similarity }),
+  
+  getFaceStatus: () => 
+    api.get('/face/status'),
+  
+  deleteFaceData: () => 
+    api.delete('/face/delete')
 };
 
 export default api;
