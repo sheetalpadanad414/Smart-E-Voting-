@@ -6,6 +6,7 @@ const compression = require('compression');
 const morgan = require('morgan');
 const { testConnection } = require('./config/database');
 const ElectionService = require('./services/electionService');
+const FaceDataCleanupJob = require('./jobs/faceDataCleanup');
 const { errorHandler, notFoundHandler } = require('./middleware/errorHandler');
 const { apiLimiter } = require('./middleware/rateLimiter');
 require('dotenv').config();
@@ -76,6 +77,7 @@ const startServer = async () => {
   try {
     await testConnection();
     ElectionService.scheduleElectionChecks();
+    FaceDataCleanupJob.start();
     app.listen(PORT, () => {
       console.log(`\n${'='.repeat(50)}`);
       console.log(`Smart E-Voting System Backend`);

@@ -247,9 +247,33 @@ class Election {
 
   static async delete(electionId) {
     const connection = await pool.getConnection();
-    await connection.query('DELETE FROM elections WHERE id = ?', [electionId]);
-    connection.release();
-    return true;
+    
+    try {
+      await connection.beginTransaction();
+      
+      // Delete related face fraud logs
+      await connection.query('DELETE FROM face_fraud_detection_logs WHERE election_id = ?', [electionId]);
+      
+      // Delete related face data
+      await connection.query('DELETE FROM election_face_data WHERE election_id = ?', [electionId]);
+      
+      // Delete related votes
+      await connection.query('DELETE FROM votes WHERE election_id = ?', [electionId]);
+      
+      // Delete related candidates
+      await connection.query('DELETE FROM candidates WHERE election_id = ?', [electionId]);
+      
+      // Delete the election
+      await connection.query('DELETE FROM elections WHERE id = ?', [electionId]);
+      
+      await connection.commit();
+      connection.release();
+      return true;
+    } catch (error) {
+      await connection.rollback();
+      connection.release();
+      throw error;
+    }
   }
 
   static async getActiveElections() {

@@ -142,20 +142,29 @@ export const institutionalAPI = {
 
 // Face Recognition endpoints (client-side processing)
 export const faceAPI = {
-  storeFaceDescriptor: (descriptor) => 
-    api.post('/face/store-descriptor', { descriptor }),
+  storeFaceDescriptor: (descriptor, electionId) => 
+    api.post('/face/store-descriptor', { descriptor, electionId }),
   
-  getFaceDescriptor: () => 
-    api.get('/face/get-descriptor'),
+  getFaceDescriptor: (electionId) => 
+    api.get('/face/get-descriptor', { params: { electionId } }),
   
-  logVerification: (verified, similarity) => 
-    api.post('/face/log-verification', { verified, similarity }),
+  logVerification: (verified, similarity, electionId) => 
+    api.post('/face/log-verification', { verified, similarity, electionId }),
   
-  getFaceStatus: () => 
-    api.get('/face/status'),
+  getFaceStatus: (electionId) => 
+    api.get('/face/status', { params: { electionId } }),
   
-  deleteFaceData: () => 
-    api.delete('/face/delete')
+  getElectionsNeedingRegistration: () =>
+    api.get('/face/elections-needing-registration'),
+  
+  deleteFaceData: (electionId) => 
+    api.delete('/face/delete', { data: { electionId } }),
+  
+  cleanupInactiveFaceData: () =>
+    api.post('/face/cleanup-inactive'),
+  
+  getFaceStats: () =>
+    api.get('/face/stats')
 };
 
 export default api;

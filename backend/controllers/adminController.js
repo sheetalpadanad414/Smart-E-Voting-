@@ -330,17 +330,30 @@ class AdminController {
       const { id } = req.params;
 
       const election = await Election.findById(id);
-      if (!election || election.status !== 'draft') {
-        return res.status(400).json({ error: 'Can only delete draft elections' });
+      if (!election) {
+        return res.status(404).json({ error: 'Election not found' });
       }
 
+      // Warn if deleting active election
+      if (election.status === 'active') {
+        console.warn('⚠️ Deleting active election:', election.title);
+      }
+
+      // Delete election and all related data
       await Election.delete(id);
 
-      res.json({ message: 'Election deleted successfully' });
+      res.json({ 
+        message: 'Election and all related data deleted successfully',
+        deletedElection: election.title
+      });
 
       // Log action
-      AdminService.logAction(req.user.userId, 'DELETE_ELECTION', 'election', id, {}, req.ip);
+      AdminService.logAction(req.user.userId, 'DELETE_ELECTION', 'election', id, {
+        title: election.title,
+        status: election.status
+      }, req.ip);
     } catch (error) {
+      console.error('Delete election error:', error);
       next(error);
     }
   }

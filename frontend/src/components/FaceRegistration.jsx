@@ -1,7 +1,7 @@
 import React, { useRef, useState, useEffect } from 'react';
 import Webcam from 'react-webcam';
 import { useFaceRecognition } from '../hooks/useFaceRecognition';
-import { faceAPI } from '../services/api';
+import { faceAPI, voterAPI } from '../services/api';
 import toast from 'react-hot-toast';
 import { FiCamera, FiCheck, FiX, FiLoader } from 'react-icons/fi';
 
@@ -11,12 +11,69 @@ const FaceRegistration = ({ onSuccess, onCancel }) => {
   const [captured, setCaptured] = useState(false);
   const [imageSrc, setImageSrc] = useState(null);
   const [processing, setProcessing] = useState(false);
+  const [activeElection, setActiveElection] = useState(null);
+  const [loadingElection, setLoadingElection] = useState(true);
   
   const { modelsLoaded, loading: modelsLoading, detectFace } = useFaceRecognition();
 
   console.log('🎭 FaceRegistration Component Rendered');
   console.log('📦 Props:', { hasOnSuccess: !!onSuccess, hasOnCancel: !!onCancel });
-  console.log('🔧 State:', { modelsLoaded, modelsLoading, captured, processing });
+  console.log('🔧 State:', { modelsLoaded, modelsLoading, captured, processing, activeElection: activeElection?.id });
+
+  // Load active election on mount and check if already registered
+  useEffect(() => {
+    const loadActiveElection = async () => {
+      try {
+        console.log('🔍 Loading active elections...');
+        const response = await voterAPI.getAvailableElections(1, 200);
+        const elections = response.data.elections || [];
+        
+        const now = new Date();
+        const active = elections.find(election => {
+          const start = new Date(election.start_date);
+          const end = new Date(election.end_date);
+          return election.status === 'active' && now >= start && now <= end;
+        });
+        
+        if (active) {
+          console.log('✅ Found active election:', active.title, active.id);
+          
+          // Check if already registered for this election
+          try {
+            const statusResponse = await faceAPI.getFaceStatus(active.id);
+            if (statusResponse.data.registered) {
+              console.log('⚠️ Already registered for this election');
+              toast.error('You have already registered your face for this election. You cannot register again.', { duration: 5000 });
+              
+              // DO NOT redirect - just close modal
+              setTimeout(() => {
+                if (onCancel) {
+                  onCancel();
+                }
+              }, 2000);
+              return;
+            }
+          } catch (statusError) {
+            console.error('Error checking face status:', statusError);
+          }
+          
+          setActiveElection(active);
+        } else {
+          console.warn('⚠️ No active election found');
+          toast.error('No active election found. Please try again later.');
+          if (onCancel) onCancel();
+        }
+      } catch (error) {
+        console.error('❌ Error loading elections:', error);
+        toast.error('Failed to load elections');
+        if (onCancel) onCancel();
+      } finally {
+        setLoadingElection(false);
+      }
+    };
+    
+    loadActiveElection();
+  }, [onCancel]);
 
   const videoConstraints = {
     width: 640,
@@ -36,8 +93,8 @@ const FaceRegistration = ({ onSuccess, onCancel }) => {
   };
 
   const registerFace = async () => {
-    if (!imageSrc || !modelsLoaded) {
-      console.error('❌ Cannot register: imageSrc or models not loaded');
+    if (!imageSrc || !modelsLoaded || !activeElection) {
+      console.error('❌ Cannot register: imageSrc, models, or election not loaded');
       toast.error('Cannot register face. Please try again.');
       return;
     }
@@ -46,6 +103,7 @@ const FaceRegistration = ({ onSuccess, onCancel }) => {
     console.log('🎭 Starting face registration...');
     console.log('📷 Image source length:', imageSrc?.length);
     console.log('🤖 Models loaded:', modelsLoaded);
+    console.log('🗳️ Election ID:', activeElection.id);
     
     try {
       // Create image element
@@ -77,10 +135,11 @@ const FaceRegistration = ({ onSuccess, onCancel }) => {
       console.log('💾 Storing face descriptor in database...');
       console.log('   Descriptor:', descriptor.slice(0, 5), '... (truncated)');
       console.log('   Descriptor length:', descriptor.length);
+      console.log('   Election ID:', activeElection.id);
       console.log('   Token in localStorage:', !!localStorage.getItem('token'));
       
-      // Store descriptor in database
-      const response = await faceAPI.storeFaceDescriptor(descriptor);
+      // Store descriptor in database with election ID
+      const response = await faceAPI.storeFaceDescriptor(descriptor, activeElection.id);
       
       console.log('✅ Backend response:', response.data);
       console.log('   Success:', response.data.success);
@@ -88,7 +147,7 @@ const FaceRegistration = ({ onSuccess, onCancel }) => {
       console.log('   Data:', response.data.data);
       console.log('✅ Face descriptor stored successfully in database!');
       
-      toast.success('Face registered successfully!');
+      toast.success(`Face registered for ${activeElection.title}!`);
       
       console.log('🎯 Calling onSuccess callback...');
       console.log('   onSuccess exists:', !!onSuccess);
@@ -115,8 +174,55 @@ const FaceRegistration = ({ onSuccess, onCancel }) => {
       console.error('   Error name:', error.name);
       console.error('   Error message:', error.message);
       console.error('   Error stack:', error.stack);
-      toast.error(error.message || 'Face registration failed. Please try again.');
-      setProcessing(false);
+      
+      // Show more specific error message
+      let errorMessage = 'Face registration failed. Please try again.';
+      let isFraudOrDuplicate = false;
+      
+      if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+        
+        // Check if it's a duplicate or fraud error
+        if (errorMessage.includes('already registered')) {
+          isFraudOrDuplicate = true;
+          
+          // Show error and DO NOT redirect
+          toast.error(errorMessage, { duration: 6000 });
+          
+          // If it's fraud (different account), log out the user
+          if (error.response.data.fraud) {
+            console.log('🚨 FRAUD DETECTED - Logging out user');
+            setTimeout(() => {
+              // Clear all auth data
+              localStorage.removeItem('token');
+              localStorage.removeItem('user');
+              sessionStorage.removeItem('pendingToken');
+              sessionStorage.removeItem('pendingUser');
+              
+              toast.error('Account suspended due to fraud attempt. Please contact admin.');
+              
+              // Redirect to login
+              window.location.href = '/login';
+            }, 3000);
+          } else {
+            // It's a duplicate (same user trying again)
+            console.log('⚠️ Duplicate registration attempt - Staying on error screen');
+            // Just show error, don't redirect anywhere
+            // User must close modal manually
+          }
+          
+          setProcessing(false);
+          return;
+        }
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      // For other errors, show message and allow retry
+      if (!isFraudOrDuplicate) {
+        toast.error(errorMessage);
+        setProcessing(false);
+      }
     }
   };
 
@@ -183,21 +289,27 @@ const FaceRegistration = ({ onSuccess, onCancel }) => {
     }
   };
 
-  if (modelsLoading) {
-    console.log('⏳ Models still loading...');
+  if (loadingElection || modelsLoading) {
+    console.log('⏳ Loading election or models...');
     return (
       <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-8">
           <div className="flex flex-col items-center justify-center">
             <FiLoader className="animate-spin text-blue-500 mb-4" size={48} />
-            <p className="text-gray-600 dark:text-gray-400">Loading face recognition models...</p>
+            <p className="text-gray-600 dark:text-gray-400">
+              {loadingElection ? 'Loading election...' : 'Loading face recognition models...'}
+            </p>
           </div>
         </div>
       </div>
     );
   }
 
-  console.log('✅ Models loaded, rendering full modal');
+  if (!activeElection) {
+    return null;
+  }
+
+  console.log('✅ Models and election loaded, rendering full modal');
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
@@ -208,6 +320,9 @@ const FaceRegistration = ({ onSuccess, onCancel }) => {
             Register Your Face
           </h2>
           <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
+            Registering for: <span className="font-semibold text-blue-600">{activeElection.title}</span>
+          </p>
+          <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
             Position your face in the center and ensure good lighting
           </p>
         </div>
